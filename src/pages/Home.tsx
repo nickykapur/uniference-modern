@@ -54,7 +54,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="flex justify-center mb-6"
           >
-            <img src="/logo.jpg" alt="Uniference" className="w-24 h-24 rounded-2xl object-cover shadow-2xl ring-4 ring-white/30" />
+            <img src="/logo.png" alt="Uniference" className="w-24 h-24 drop-shadow-2xl" />
           </motion.div>
 
           <motion.p
