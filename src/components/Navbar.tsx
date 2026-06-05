@@ -11,7 +11,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 text-white font-bold text-xl">
-            <img src="/logo.jpg" alt="Uniference" className="w-8 h-8 mix-blend-multiply" />
+            <img src="/logo.png" alt="Uniference" className="w-8 h-8" />
             <span>Uniference</span>
           </Link>
 

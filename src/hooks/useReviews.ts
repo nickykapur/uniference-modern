@@ -24,6 +24,7 @@ export function useReviews() {
         createdAt: Timestamp.now(),
       })
     } catch (e) {
+      console.error('Submit error:', e)
       setError('Error al enviar la reseña. Intenta de nuevo.')
       throw e
     } finally {
@@ -35,7 +36,6 @@ export function useReviews() {
     setLoading(true)
     setError(null)
     try {
-      // Simple single-field query — no composite index needed
       const q = query(
         collection(db, 'reviews'),
         where('universidad', '==', universidad)
@@ -44,16 +44,20 @@ export function useReviews() {
       const results = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() } as Review))
         .filter((r) => r.profesor.toLowerCase().includes(profesor.toLowerCase()))
-        // Sort client-side — newest first
         .sort((a, b) => {
           const ta = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0
           const tb = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0
           return tb - ta
         })
       return results
-    } catch (e) {
-      console.error('Firestore error:', e)
-      setError('Error al buscar reseñas. Intenta de nuevo.')
+    } catch (e: unknown) {
+      console.error('Search error:', e)
+      const code = (e as { code?: string }).code
+      if (code === 'permission-denied') {
+        setError('Acceso denegado. Actualiza las reglas de Firestore en Firebase Console.')
+      } else {
+        setError('Error al buscar reseñas. Intenta de nuevo.')
+      }
       return []
     } finally {
       setLoading(false)
