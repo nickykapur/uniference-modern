@@ -21,10 +21,11 @@ export function useReviews() {
     try {
       await addDoc(collection(db, 'reviews'), {
         ...review,
+        aceptado: true, // auto-approve — you can flip to false later for moderation
         createdAt: Timestamp.now(),
       })
     } catch (e) {
-      setError('Error submitting review. Please try again.')
+      setError('Error al enviar la reseña. Intenta de nuevo.')
       throw e
     } finally {
       setLoading(false)
@@ -38,7 +39,6 @@ export function useReviews() {
       const q = query(
         collection(db, 'reviews'),
         where('universidad', '==', universidad),
-        where('aceptado', '==', true),
         orderBy('createdAt', 'desc')
       )
       const snapshot = await getDocs(q)
@@ -49,7 +49,7 @@ export function useReviews() {
         )
       return results
     } catch (e) {
-      setError('Error searching reviews.')
+      setError('Error al buscar reseñas. Intenta de nuevo.')
       return []
     } finally {
       setLoading(false)
