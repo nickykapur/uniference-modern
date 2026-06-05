@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Loader2, CheckCircle, Star, BookOpen, Building2, MessageSquare, Eye } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
@@ -84,26 +84,13 @@ export default function Evaluar() {
   ]
 
   const handleSubmit = async () => {
-    await submitReview({ ...form, userId: user!.uid, userEmail: user!.email ?? undefined, aceptado: false })
+    await submitReview({
+      ...form,
+      userId: user?.uid ?? 'anon',
+      userEmail: user?.email ?? undefined,
+      aceptado: false,
+    })
     setDone(true)
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl shadow-sm border border-gray-200 p-10 text-center max-w-sm">
-          <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Star className="w-7 h-7 text-primary-500" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Inicia sesión para evaluar</h2>
-          <p className="text-gray-500 text-sm mb-6">Debes estar registrado para dejar una reseña.</p>
-          <Link to="/login" className="inline-block bg-primary-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-600 transition-colors">
-            Iniciar sesión
-          </Link>
-        </motion.div>
-      </div>
-    )
   }
 
   if (done) {
