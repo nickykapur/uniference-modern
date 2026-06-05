@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { GraduationCap, Menu, X, LogOut, User } from 'lucide-react'
+import { Menu, X, LogOut, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
@@ -19,7 +19,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 text-primary-700 font-bold text-xl">
-            <GraduationCap className="w-7 h-7" />
+            <img src="/logo.jpg" alt="Uniference" className="w-8 h-8 rounded-lg object-cover" />
             <span>Uniference</span>
           </Link>
 
