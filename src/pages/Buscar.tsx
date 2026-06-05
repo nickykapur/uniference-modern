@@ -153,7 +153,9 @@ export default function Buscar() {
         const q = query(collection(db, 'reviews'), where('universidad', '==', universidad))
         const snap = await getDocs(q)
         const names = Array.from(new Set(
-          snap.docs.map(d => d.data().profesor as string)
+          snap.docs
+            .filter(d => d.data().aceptado === true)
+            .map(d => d.data().profesor as string)
             .filter(n => n.toLowerCase().includes(profesor.toLowerCase()))
         )).slice(0, 6)
         setSuggestions(names)

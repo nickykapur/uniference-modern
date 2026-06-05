@@ -70,16 +70,13 @@ export function useReviews() {
     setError(null)
     setSuggestions([])
     try {
-      const q = query(
-        collection(db, 'reviews'),
-        where('universidad', '==', universidad),
-        where('aceptado', '==', true),
-      )
+      const q = query(collection(db, 'reviews'), where('universidad', '==', universidad))
       const snapshot = await getDocs(q)
       const allReviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review))
 
       const matched = allReviews
         .filter((r) => {
+          if (!r.aceptado) return false
           const name = r.profesor.toLowerCase()
           const terms = profesor.toLowerCase().trim().split(/\s+/)
           return terms.every(t => name.includes(t))
