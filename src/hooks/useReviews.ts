@@ -52,12 +52,13 @@ export function useReviews() {
         })
       return results
     } catch (e: unknown) {
-      console.error('Search error:', e)
       const code = (e as { code?: string }).code
+      const msg = (e as { message?: string }).message ?? ''
+      console.error('Search error:', code, msg)
       if (code === 'permission-denied') {
-        setError('Acceso denegado. Actualiza las reglas de Firestore en Firebase Console.')
+        setError('Permiso denegado — actualiza las reglas de Firestore: allow read: if true')
       } else {
-        setError('Error al buscar reseñas. Intenta de nuevo.')
+        setError(`Error: ${code ?? msg}`)
       }
       return []
     } finally {

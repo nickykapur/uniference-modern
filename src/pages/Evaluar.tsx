@@ -138,7 +138,7 @@ export default function Evaluar() {
         </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-4 -mt-16 pb-12">
+      <div className="max-w-xl mx-auto px-4 -mt-16 pb-12 relative z-10">
         {/* Step progress */}
         <div className="flex items-center justify-center mb-5">
           {STEP_LABELS.map((label, i) => (

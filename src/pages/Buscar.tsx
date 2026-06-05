@@ -199,7 +199,7 @@ export default function Buscar() {
       </div>
 
       {/* Floating search card */}
-      <div className="max-w-2xl mx-auto px-4 -mt-16">
+      <div className="max-w-2xl mx-auto px-4 -mt-16 relative z-10">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-white rounded-2xl shadow-xl border border-gray-100">
 
