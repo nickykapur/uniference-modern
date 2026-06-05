@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, Loader2, Star, BookOpen, Building2 } from 'lucide-react'
+import { Search, Loader2, Star, BookOpen, Building2, MessageSquarePlus } from 'lucide-react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useReviews } from '../hooks/useReviews'
@@ -7,13 +7,32 @@ import type { Review } from '../types'
 import { UNIVERSIDADES } from '../types'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
+import { Link } from 'react-router-dom'
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.08, duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }
+    transition: { delay: i * 0.07, duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }
   }),
+}
+
+const UNI_COLORS: Record<string, string> = {
+  utp:      'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100',
+  latina:   'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100',
+  nacional: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100',
+  usma:     'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100',
+  isae:     'bg-green-50 border-green-200 text-green-700 hover:bg-green-100',
+  umecit:   'bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100',
+}
+
+const UNI_ACTIVE: Record<string, string> = {
+  utp:      'bg-blue-500 border-blue-500 text-white',
+  latina:   'bg-orange-500 border-orange-500 text-white',
+  nacional: 'bg-red-500 border-red-500 text-white',
+  usma:     'bg-purple-500 border-purple-500 text-white',
+  isae:     'bg-green-500 border-green-500 text-white',
+  umecit:   'bg-teal-500 border-teal-500 text-white',
 }
 
 function StarDisplay({ value }: { value: number }) {
@@ -26,42 +45,89 @@ function StarDisplay({ value }: { value: number }) {
   )
 }
 
+function RatingBadge({ value }: { value: number }) {
+  const color = value >= 4 ? 'bg-green-100 text-green-700' : value >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+  return (
+    <span className={`text-sm font-bold px-2.5 py-1 rounded-lg ${color}`}>
+      {value.toFixed(1)}
+    </span>
+  )
+}
+
 function ReviewCard({ review, index }: { review: Review; index: number }) {
   const univName = UNIVERSIDADES[review.universidad as keyof typeof UNIVERSIDADES] ?? review.universidad
   return (
     <motion.div
       custom={index} variants={cardVariants} initial="hidden" animate="visible"
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-6"
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            {review.profesor.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">{review.profesor}</h3>
-            <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
-              <BookOpen className="w-3 h-3" />
-              <span>{review.materia}</span>
+      <div className="h-1.5 bg-gradient-to-r from-primary-400 to-primary-600" />
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0 shadow-sm">
+              {review.profesor.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">{review.profesor}</h3>
+              <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                <BookOpen className="w-3 h-3" />
+                <span>{review.materia}</span>
+              </div>
             </div>
           </div>
+          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <StarDisplay value={review.rating} />
+            <RatingBadge value={review.rating} />
+          </div>
         </div>
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          <StarDisplay value={review.rating} />
-          <span className="text-xs font-semibold text-amber-500">{review.rating}.0 / 5</span>
+
+        <blockquote className="text-gray-600 text-sm leading-relaxed bg-gray-50 rounded-xl px-4 py-3 border-l-4 border-primary-400 italic">
+          "{review.comentario}"
+        </blockquote>
+
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50">
+          <span className="inline-flex items-center gap-1 text-xs bg-primary-50 text-primary-700 px-2.5 py-1 rounded-full font-medium">
+            <Building2 className="w-3 h-3" />
+            {univName}
+          </span>
+          <span className="text-xs text-gray-400">@{review.userEmail?.split('@')[0] ?? 'anónimo'}</span>
         </div>
       </div>
+    </motion.div>
+  )
+}
 
-      <p className="text-gray-600 text-sm leading-relaxed border-l-2 border-primary-200 pl-3 my-3">
-        "{review.comentario}"
-      </p>
-
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50">
-        <span className="inline-flex items-center gap-1 text-xs bg-primary-50 text-primary-700 px-2.5 py-1 rounded-full font-medium">
-          <Building2 className="w-3 h-3" />
-          {univName}
-        </span>
-        <span className="text-xs text-gray-400">{review.userEmail?.split('@')[0] ?? 'Anónimo'}</span>
+function AggregateBar({ reviews }: { reviews: Review[] }) {
+  const avg = reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
+  const dist = [5,4,3,2,1].map(n => ({ star: n, count: reviews.filter(r => r.rating === n).length }))
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6"
+    >
+      <div className="flex items-center gap-6">
+        <div className="text-center flex-shrink-0">
+          <p className="text-4xl font-extrabold text-gray-900">{avg.toFixed(1)}</p>
+          <StarDisplay value={Math.round(avg)} />
+          <p className="text-xs text-gray-400 mt-1">{reviews.length} reseña{reviews.length !== 1 ? 's' : ''}</p>
+        </div>
+        <div className="flex-1 space-y-1.5">
+          {dist.map(({ star, count }) => (
+            <div key={star} className="flex items-center gap-2 text-xs text-gray-500">
+              <span className="w-3 text-right">{star}</span>
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400 flex-shrink-0" />
+              <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }} animate={{ width: `${reviews.length ? (count / reviews.length) * 100 : 0}%` }}
+                  transition={{ delay: 0.3, duration: 0.6 }}
+                  className="h-full bg-amber-400 rounded-full"
+                />
+              </div>
+              <span className="w-4">{count}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </motion.div>
   )
@@ -111,105 +177,127 @@ export default function Buscar() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-primary-500 pt-12 pb-16 px-4">
+      {/* Teal header */}
+      <div className="bg-primary-500 pt-12 pb-24 px-4">
         <div className="max-w-2xl mx-auto text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-            className="text-3xl sm:text-4xl font-extrabold text-white mb-2"
-          >
+          <motion.h1 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+            className="text-3xl sm:text-4xl font-extrabold text-white mb-2">
             Buscar Profesor
           </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-            className="text-primary-100"
-          >
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            className="text-primary-100">
             Encuentra reseñas y calificaciones de profesores en tu universidad
           </motion.p>
         </div>
       </div>
 
-      {/* Search card — overlaps the teal header */}
-      <div className="max-w-2xl mx-auto px-4 -mt-8">
-        <motion.form
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          onSubmit={handleSubmit}
-          className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 space-y-4"
-        >
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Universidad</label>
-            <select
-              value={universidad}
-              onChange={(e) => { setUniversidad(e.target.value); setProfesor(''); setSuggestions([]) }}
-              required
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white transition-colors"
-            >
-              <option value="">Selecciona tu universidad…</option>
-              {Object.entries(UNIVERSIDADES).map(([key, name]) => (
-                <option key={key} value={key}>{name}</option>
-              ))}
-            </select>
-          </div>
+      {/* Floating search card */}
+      <div className="max-w-2xl mx-auto px-4 -mt-16">
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
 
-          <div className="relative" ref={suggestRef}>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre del profesor</label>
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={profesor}
-                onChange={(e) => { setProfesor(e.target.value); setShowSuggestions(true) }}
-                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                required
-                placeholder="Ej. Juan García"
-                autoComplete="off"
-                className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-gray-900 bg-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white transition-colors"
-              />
-            </div>
-            <AnimatePresence>
-              {showSuggestions && suggestions.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  className="absolute z-20 left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+          {/* University pill selector */}
+          <div className="p-5 border-b border-gray-50">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Universidad</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(UNIVERSIDADES).map(([key]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { setUniversidad(key); setProfesor(''); setSuggestions([]) }}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    universidad === key ? UNI_ACTIVE[key] : UNI_COLORS[key]
+                  }`}
                 >
-                  {suggestions.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => { setProfesor(name); setShowSuggestions(false) }}
-                      className="w-full text-left px-4 py-3 text-sm text-gray-800 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-gray-50 last:border-0 flex items-center gap-2"
-                    >
-                      <Search className="w-3.5 h-3.5 text-gray-400" />
-                      {name}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  {key.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            {universidad && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="text-xs text-gray-400 mt-2">
+                {UNIVERSIDADES[universidad as keyof typeof UNIVERSIDADES]}
+              </motion.p>
+            )}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-500 text-white py-3.5 rounded-xl font-semibold hover:bg-primary-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-primary-200"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-            Buscar
-          </button>
-        </motion.form>
+          {/* Professor search */}
+          <form onSubmit={handleSubmit} className="p-5 space-y-3">
+            <div className="relative" ref={suggestRef}>
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={profesor}
+                  onChange={(e) => { setProfesor(e.target.value); setShowSuggestions(true) }}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  required
+                  disabled={!universidad}
+                  placeholder={universidad ? 'Nombre del profesor…' : 'Selecciona primero una universidad'}
+                  autoComplete="off"
+                  className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-gray-900 bg-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </div>
+              <AnimatePresence>
+                {showSuggestions && suggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                    className="absolute z-20 left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+                  >
+                    {suggestions.map((name) => (
+                      <button key={name} type="button"
+                        onClick={() => { setProfesor(name); setShowSuggestions(false) }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-800 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-gray-50 last:border-0 flex items-center gap-2">
+                        <Search className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        {name}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button type="submit" disabled={loading || !universidad}
+              className="w-full bg-primary-500 text-white py-3.5 rounded-xl font-semibold hover:bg-primary-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99] shadow-md">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+              Buscar
+            </button>
+          </form>
+        </motion.div>
       </div>
 
-      {/* Results */}
+      {/* Results area */}
       <div className="max-w-2xl mx-auto px-4 py-8">
         {error && <p className="text-red-500 text-sm text-center mb-6">{error}</p>}
 
-        {results !== null && (
+        {results === null && !loading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+            className="text-center py-16 text-gray-400">
+            <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">Busca a tu profesor arriba</p>
+            <p className="text-sm mt-1">Selecciona tu universidad y escribe el nombre</p>
+          </motion.div>
+        )}
+
+        {results !== null && results.length === 0 && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-16">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MessageSquarePlus className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="font-semibold text-gray-700 mb-1">Sin reseñas todavía</p>
+            <p className="text-sm text-gray-400 mb-5">Sé el primero en evaluar a este profesor</p>
+            <Link to="/evaluar"
+              className="inline-flex items-center gap-2 bg-primary-500 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-primary-600 transition-colors text-sm">
+              <MessageSquarePlus className="w-4 h-4" />
+              Dejar una reseña
+            </Link>
+          </motion.div>
+        )}
+
+        {results !== null && results.length > 0 && (
           <div>
-            <p className="text-sm text-gray-500 mb-5 font-medium">
-              {results.length === 0
-                ? '😕 No se encontraron reseñas para este profesor.'
-                : `${results.length} reseña${results.length !== 1 ? 's' : ''} encontrada${results.length !== 1 ? 's' : ''}`}
-            </p>
+            <AggregateBar reviews={results} />
             <div className="space-y-4">
               {results.map((r, i) => <ReviewCard key={r.id} review={r} index={i} />)}
             </div>
