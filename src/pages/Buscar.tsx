@@ -143,7 +143,7 @@ export default function Buscar() {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [results, setResults] = useState<Review[] | null>(null)
-  const { searchReviews, loading, error } = useReviews()
+  const { searchReviews, loading, error, suggestions: fuzzySuggestions } = useReviews()
   const suggestRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -289,12 +289,37 @@ export default function Buscar() {
 
         {results !== null && results.length === 0 && (
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-16">
+            className="text-center py-12">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <MessageSquarePlus className="w-8 h-8 text-gray-400" />
             </div>
             <p className="font-semibold text-gray-700 mb-1">Sin reseñas todavía</p>
-            <p className="text-sm text-gray-400 mb-5">Sé el primero en evaluar a este profesor</p>
+            <p className="text-sm text-gray-400 mb-5">No encontramos reseñas para ese nombre</p>
+
+            {fuzzySuggestions.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                className="mb-6">
+                <p className="text-sm font-medium text-gray-500 mb-3">¿Quisiste decir...?</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {fuzzySuggestions.map(name => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={async () => {
+                        setProfesor(name)
+                        const data = await searchReviews(universidad, name)
+                        setResults(data)
+                      }}
+                      className="inline-flex items-center gap-1.5 bg-primary-50 text-primary-700 border border-primary-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-100 transition-colors"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             <Link to="/evaluar"
               className="inline-flex items-center gap-2 bg-primary-500 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-primary-600 transition-colors text-sm">
               <MessageSquarePlus className="w-4 h-4" />
