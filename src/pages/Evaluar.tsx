@@ -118,14 +118,30 @@ export default function Evaluar() {
   ]
 
   const handleSubmit = async () => {
-    await submitReview({
+    const profesor = titleCase(form.profesor.trim())
+    const materia = titleCase(form.materia.trim())
+    const docId = await submitReview({
       ...form,
-      profesor: titleCase(form.profesor.trim()),
-      materia: titleCase(form.materia.trim()),
+      profesor,
+      materia,
       userId: user?.uid ?? 'anon',
       userEmail: user?.email ?? undefined,
       aceptado: false,
     })
+    // Fire-and-forget: notify admin via Telegram (doesn't block success screen)
+    fetch('/.netlify/functions/notify-review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        docId,
+        universidad: form.universidad,
+        profesor,
+        materia,
+        rating: form.rating,
+        comentario: form.comentario,
+        userEmail: user?.email ?? null,
+      }),
+    }).catch(() => {/* best-effort */})
     setDone(true)
   }
 
