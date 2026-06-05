@@ -44,7 +44,11 @@ export function useReviews() {
       console.log('Firestore returned', snapshot.docs.length, 'docs:', snapshot.docs.map(d => d.data()))
       const results = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() } as Review))
-        .filter((r) => r.profesor.toLowerCase().includes(profesor.toLowerCase()))
+        .filter((r) => {
+          const name = r.profesor.toLowerCase()
+          const terms = profesor.toLowerCase().trim().split(/\s+/)
+          return terms.every(t => name.includes(t))
+        })
         .sort((a, b) => {
           const ta = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0
           const tb = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0

@@ -1,11 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, CheckCircle, Star, BookOpen, Building2, MessageSquare, Eye } from 'lucide-react'
+import { Loader2, CheckCircle, Star, BookOpen, Building2, MessageSquare, Eye, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { useReviews } from '../hooks/useReviews'
 import { UNIVERSIDADES } from '../types'
+
+const titleCase = (s: string) =>
+  s.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
 
 const UNI_COLORS: Record<string, string> = {
   utp:      'border-blue-200 hover:bg-blue-50 hover:border-blue-400',
@@ -72,6 +77,35 @@ export default function Evaluar() {
   const [dir, setDir] = useState(1)
   const [done, setDone] = useState(false)
   const [form, setForm] = useState({ universidad: '', profesor: '', materia: '', comentario: '', rating: 0 })
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const suggestRef = useRef<HTMLDivElement>(null)
+
+  // Fetch professor suggestions from existing reviews
+  useEffect(() => {
+    if (!form.universidad || form.profesor.trim().length < 2) { setSuggestions([]); return }
+    const timer = setTimeout(async () => {
+      try {
+        const q = query(collection(db, 'reviews'), where('universidad', '==', form.universidad))
+        const snap = await getDocs(q)
+        const names = Array.from(new Set(
+          snap.docs.map(d => d.data().profesor as string)
+            .filter(n => n.toLowerCase().includes(form.profesor.toLowerCase()))
+        )).slice(0, 6)
+        setSuggestions(names)
+        setShowSuggestions(names.length > 0)
+      } catch { setSuggestions([]) }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [form.universidad, form.profesor])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) setShowSuggestions(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const goTo = (next: number) => { setDir(next > step ? 1 : -1); setStep(next) }
 
@@ -86,6 +120,8 @@ export default function Evaluar() {
   const handleSubmit = async () => {
     await submitReview({
       ...form,
+      profesor: titleCase(form.profesor.trim()),
+      materia: titleCase(form.materia.trim()),
       userId: user?.uid ?? 'anon',
       userEmail: user?.email ?? undefined,
       aceptado: false,
@@ -199,12 +235,35 @@ export default function Evaluar() {
                 {step === 1 && (
                   <div className="space-y-4">
                     <h2 className="text-lg font-bold text-gray-900">¿A quién vas a evaluar?</h2>
-                    <div>
+                    <div className="relative" ref={suggestRef}>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre del profesor</label>
-                      <input type="text" value={form.profesor}
-                        onChange={e => setForm({ ...form, profesor: e.target.value })}
-                        autoFocus placeholder="Ej. Juan García"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors" />
+                      <div className="relative">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input type="text" value={form.profesor}
+                          onChange={e => { setForm({ ...form, profesor: e.target.value }); setShowSuggestions(true) }}
+                          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                          autoFocus autoComplete="off" placeholder="Ej. Juan García"
+                          className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors" />
+                      </div>
+                      <AnimatePresence>
+                        {showSuggestions && suggestions.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                            className="absolute z-20 left-0 right-0 mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+                          >
+                            <p className="text-xs text-gray-400 px-4 py-2 border-b border-gray-50">Profesores existentes — selecciona para evitar errores</p>
+                            {suggestions.map(name => (
+                              <button key={name} type="button"
+                                onClick={() => { setForm({ ...form, profesor: name }); setShowSuggestions(false) }}
+                                className="w-full text-left px-4 py-3 text-sm text-gray-800 hover:bg-primary-50 hover:text-primary-700 transition-colors border-b border-gray-50 last:border-0 flex items-center gap-2">
+                                <Search className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                {name}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      <p className="text-xs text-gray-400 mt-1.5">Si el profesor ya existe, aparecerá como sugerencia</p>
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Materia</label>

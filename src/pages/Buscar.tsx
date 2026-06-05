@@ -175,7 +175,8 @@ export default function Buscar() {
     e.preventDefault()
     if (!universidad || !profesor.trim()) return
     setShowSuggestions(false)
-    const data = await searchReviews(universidad, profesor)
+    // Normalize input so "carlos mendoza" finds "Carlos Mendoza"
+    const data = await searchReviews(universidad, profesor.trim())
     setResults(data)
   }
 
