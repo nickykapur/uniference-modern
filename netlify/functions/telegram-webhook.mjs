@@ -2,16 +2,30 @@
  * Netlify Function: telegram-webhook
  * Telegram calls this when you tap ✅ Aprobar or ❌ Rechazar.
  *
- * APPROVE_<docId> → sets aceptado:true in Firestore via REST API
- * DENY_<docId>    → leaves aceptado:false (review stays hidden), edits message to show status
+ * APPROVE_<docId> → signs in anonymously (satisfies `request.auth != null`),
+ *                   then sets aceptado:true via Firestore REST API.
+ * DENY_<docId>    → leaves aceptado:false (review stays hidden).
  *
- * Firestore REST API uses the public API key — no service account needed.
- * Requires this Firestore rule:
- *   allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aceptado']);
+ * No Firestore rule changes needed — anonymous auth satisfies the existing
+ * `allow update: if request.auth != null` rule.
  */
 
 const FIREBASE_PROJECT = 'uniference-2db8a'
 const FIREBASE_API_KEY = 'AIzaSyCXi090Onl0-A4ylyAmICJkau5ibpZq0_A'
+
+async function getAnonIdToken() {
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ returnSecureToken: true }),
+    }
+  )
+  if (!res.ok) throw new Error('Anonymous sign-in failed')
+  const data = await res.json()
+  return data.idToken
+}
 
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -69,15 +83,26 @@ export const handler = async (event) => {
   const docId = data.replace(/^(APPROVE|DENY)_/, '')
 
   if (action === 'APPROVE') {
-    // Update aceptado:true via Firestore REST API
+    // Sign in anonymously to satisfy `request.auth != null` rule
+    let idToken
+    try {
+      idToken = await getAnonIdToken()
+    } catch {
+      await answerCallback('❌ Error de autenticación con Firebase')
+      return { statusCode: 200, body: 'OK' }
+    }
+
     const url =
       `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}` +
       `/databases/(default)/documents/reviews/${docId}` +
-      `?updateMask.fieldPaths=aceptado&key=${FIREBASE_API_KEY}`
+      `?updateMask.fieldPaths=aceptado`
 
     const fsRes = await fetch(url, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
       body: JSON.stringify({ fields: { aceptado: { booleanValue: true } } }),
     })
 
