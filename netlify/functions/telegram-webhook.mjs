@@ -74,13 +74,28 @@ export const handler = async (event) => {
       }),
     })
 
-  if (!data || (!data.startsWith('APPROVE_') && !data.startsWith('DENY_'))) {
+  // Support both formats:
+  //   new: "APPROVE:reviews:docId" / "APPROVE:tutors:docId"
+  //   old: "APPROVE_docId" (reviews, backward compat)
+  let action, collection, docId
+  if (data?.includes(':')) {
+    // New format
+    const parts = data.split(':')
+    action = parts[0]
+    collection = parts[1]
+    docId = parts[2]
+  } else if (data?.startsWith('APPROVE_') || data?.startsWith('DENY_')) {
+    // Old format — treat as reviews
+    action = data.startsWith('APPROVE_') ? 'APPROVE' : 'DENY'
+    collection = 'reviews'
+    docId = data.replace(/^(APPROVE|DENY)_/, '')
+  } else {
     await answerCallback('Acción desconocida')
     return { statusCode: 200, body: 'OK' }
   }
 
-  const action = data.startsWith('APPROVE_') ? 'APPROVE' : 'DENY'
-  const docId = data.replace(/^(APPROVE|DENY)_/, '')
+  const isReview = collection === 'reviews'
+  const label = isReview ? 'Reseña' : 'Tutor'
 
   if (action === 'APPROVE') {
     // Sign in anonymously to satisfy `request.auth != null` rule
@@ -94,7 +109,7 @@ export const handler = async (event) => {
 
     const url =
       `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}` +
-      `/databases/(default)/documents/reviews/${docId}` +
+      `/databases/(default)/documents/${collection}/${docId}` +
       `?updateMask.fieldPaths=aceptado`
 
     const fsRes = await fetch(url, {
@@ -109,18 +124,17 @@ export const handler = async (event) => {
     if (!fsRes.ok) {
       const err = await fsRes.text()
       console.error('Firestore error:', err)
-      await answerCallback('❌ Error al aprobar — revisa las reglas de Firestore')
+      await answerCallback('❌ Error al aprobar')
       return { statusCode: 200, body: 'OK' }
     }
 
-    await answerCallback('✅ Reseña aprobada y publicada')
+    await answerCallback(`✅ ${label} aprobado/a y publicado/a`)
     const originalText = message?.text ?? ''
-    await editMessage(`✅ *APROBADA*\n\n${originalText}`)
+    await editMessage(`✅ *APROBADO/A*\n\n${originalText}`)
   } else {
-    // DENY: leave aceptado:false — review is already hidden from search
-    await answerCallback('🗑 Reseña rechazada')
+    await answerCallback(`🗑 ${label} rechazado/a`)
     const originalText = message?.text ?? ''
-    await editMessage(`❌ *RECHAZADA*\n\n${originalText}`)
+    await editMessage(`❌ *RECHAZADO/A*\n\n${originalText}`)
   }
 
   return { statusCode: 200, body: 'OK' }

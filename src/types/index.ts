@@ -11,6 +11,22 @@ export interface Review {
   aceptado: boolean
 }
 
+export interface Tutor {
+  id?: string
+  nombre: string
+  universidad: string
+  carrera: string
+  materia: string
+  whatsapp: string
+  porQueGoodTutor: string
+  disponibilidad: string[]
+  tarifa: 'gratis' | 'pago'
+  precio?: string
+  fotoUrl?: string
+  aceptado: boolean
+  createdAt?: unknown
+}
+
 export interface User {
   uid: string
   email: string | null
