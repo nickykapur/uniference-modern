@@ -176,7 +176,7 @@ export default function Evaluar() {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
           <div className="h-1 bg-gray-100">
             <motion.div
               animate={{ width: `${((step) / (STEP_LABELS.length - 1)) * 100}%` }}

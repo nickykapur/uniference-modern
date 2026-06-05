@@ -56,6 +56,10 @@ function RatingBadge({ value }: { value: number }) {
 
 function ReviewCard({ review, index }: { review: Review; index: number }) {
   const univName = UNIVERSIDADES[review.universidad as keyof typeof UNIVERSIDADES] ?? review.universidad
+  const profesor = review.profesor ?? '—'
+  const materia = review.materia ?? '—'
+  const comentario = typeof review.comentario === 'string' ? review.comentario : ''
+  const rating = Number(review.rating) || 0
   return (
     <motion.div
       custom={index} variants={cardVariants} initial="hidden" animate="visible"
@@ -66,24 +70,24 @@ function ReviewCard({ review, index }: { review: Review; index: number }) {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0 shadow-sm">
-              {review.profesor.charAt(0).toUpperCase()}
+              {profesor.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h3 className="font-bold text-gray-900">{review.profesor}</h3>
+              <h3 className="font-bold text-gray-900">{profesor}</h3>
               <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
                 <BookOpen className="w-3 h-3" />
-                <span>{review.materia}</span>
+                <span>{materia}</span>
               </div>
             </div>
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-            <StarDisplay value={review.rating} />
-            <RatingBadge value={review.rating} />
+            <StarDisplay value={rating} />
+            <RatingBadge value={rating} />
           </div>
         </div>
 
         <blockquote className="text-gray-600 text-sm leading-relaxed bg-gray-50 rounded-xl px-4 py-3 border-l-4 border-primary-400 italic">
-          "{review.comentario}"
+          "{comentario}"
         </blockquote>
 
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50">
@@ -197,7 +201,7 @@ export default function Buscar() {
       {/* Floating search card */}
       <div className="max-w-2xl mx-auto px-4 -mt-16">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          className="bg-white rounded-2xl shadow-xl border border-gray-100">
 
           {/* University pill selector */}
           <div className="p-5 border-b border-gray-50">

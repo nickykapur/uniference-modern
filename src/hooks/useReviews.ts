@@ -41,6 +41,7 @@ export function useReviews() {
         where('universidad', '==', universidad)
       )
       const snapshot = await getDocs(q)
+      console.log('Firestore returned', snapshot.docs.length, 'docs:', snapshot.docs.map(d => d.data()))
       const results = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() } as Review))
         .filter((r) => r.profesor.toLowerCase().includes(profesor.toLowerCase()))
