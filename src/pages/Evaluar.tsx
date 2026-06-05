@@ -134,16 +134,21 @@ export default function Evaluar() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Teal header */}
-      <div className="bg-primary-500 pt-12 pb-24 px-4 text-center">
-        <motion.h1 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-          className="text-3xl sm:text-4xl font-extrabold text-white mb-2">
-          Evaluar Profesor
-        </motion.h1>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-          className="text-primary-100">
-          Comparte tu experiencia y ayuda a otros estudiantes
-        </motion.p>
+      {/* Teal header with animated circles */}
+      <div className="relative bg-primary-500 pt-12 pb-24 px-4 text-center overflow-hidden">
+        <ul className="circles">
+          {Array.from({ length: 10 }).map((_, i) => <li key={i} />)}
+        </ul>
+        <div className="relative z-10">
+          <motion.h1 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+            className="text-3xl sm:text-4xl font-extrabold text-white mb-2">
+            Evaluar Profesor
+          </motion.h1>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            className="text-primary-100">
+            Comparte tu experiencia y ayuda a otros estudiantes
+          </motion.p>
+        </div>
       </div>
 
       <div className="max-w-xl mx-auto px-4 -mt-16 pb-12">

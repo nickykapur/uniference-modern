@@ -5,7 +5,6 @@ import {
   query,
   where,
   getDocs,
-  orderBy,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -21,7 +20,7 @@ export function useReviews() {
     try {
       await addDoc(collection(db, 'reviews'), {
         ...review,
-        aceptado: true, // auto-approve — you can flip to false later for moderation
+        aceptado: false,
         createdAt: Timestamp.now(),
       })
     } catch (e) {
@@ -36,19 +35,24 @@ export function useReviews() {
     setLoading(true)
     setError(null)
     try {
+      // Simple single-field query — no composite index needed
       const q = query(
         collection(db, 'reviews'),
-        where('universidad', '==', universidad),
-        orderBy('createdAt', 'desc')
+        where('universidad', '==', universidad)
       )
       const snapshot = await getDocs(q)
       const results = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() } as Review))
-        .filter((r) =>
-          r.profesor.toLowerCase().includes(profesor.toLowerCase())
-        )
+        .filter((r) => r.profesor.toLowerCase().includes(profesor.toLowerCase()))
+        // Sort client-side — newest first
+        .sort((a, b) => {
+          const ta = (a.createdAt as unknown as { seconds: number })?.seconds ?? 0
+          const tb = (b.createdAt as unknown as { seconds: number })?.seconds ?? 0
+          return tb - ta
+        })
       return results
     } catch (e) {
+      console.error('Firestore error:', e)
       setError('Error al buscar reseñas. Intenta de nuevo.')
       return []
     } finally {

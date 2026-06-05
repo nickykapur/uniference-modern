@@ -177,9 +177,12 @@ export default function Buscar() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Teal header */}
-      <div className="bg-primary-500 pt-12 pb-24 px-4">
-        <div className="max-w-2xl mx-auto text-center">
+      {/* Teal header with animated circles */}
+      <div className="relative bg-primary-500 pt-12 pb-24 px-4 overflow-hidden">
+        <ul className="circles">
+          {Array.from({ length: 10 }).map((_, i) => <li key={i} />)}
+        </ul>
+        <div className="relative z-10 max-w-2xl mx-auto text-center">
           <motion.h1 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
             className="text-3xl sm:text-4xl font-extrabold text-white mb-2">
             Buscar Profesor
