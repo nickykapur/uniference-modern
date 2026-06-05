@@ -4,6 +4,11 @@
  * Sends a Telegram message with Approve/Reject inline buttons.
  */
 
+const esc = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' }
@@ -28,15 +33,15 @@ export const handler = async (event) => {
   const disponLabel = Array.isArray(disponibilidad) ? disponibilidad.join(', ') : disponibilidad
 
   const text =
-    `🎓 *Nueva solicitud de tutor*\n\n` +
-    `👤 *Nombre:* ${nombre}\n` +
-    `🏫 *Universidad:* ${universidad?.toUpperCase()}\n` +
-    `📖 *Carrera:* ${carrera}\n` +
-    `📚 *Materia:* ${materia}\n` +
-    `📱 *WhatsApp:* ${whatsapp}\n` +
-    `⏰ *Disponibilidad:* ${disponLabel}\n` +
-    `💵 *Tarifa:* ${tarifaLabel}\n\n` +
-    `💬 _"${porQueGoodTutor}"_`
+    `🎓 <b>Nueva solicitud de tutor</b>\n\n` +
+    `👤 <b>Nombre:</b> ${esc(nombre)}\n` +
+    `🏫 <b>Universidad:</b> ${esc(universidad?.toUpperCase())}\n` +
+    `📖 <b>Carrera:</b> ${esc(carrera)}\n` +
+    `📚 <b>Materia:</b> ${esc(materia)}\n` +
+    `📱 <b>WhatsApp:</b> ${esc(whatsapp)}\n` +
+    `⏰ <b>Disponibilidad:</b> ${esc(disponLabel)}\n` +
+    `💵 <b>Tarifa:</b> ${esc(tarifaLabel)}\n\n` +
+    `💬 <i>"${esc(porQueGoodTutor)}"</i>`
 
   const keyboard = {
     inline_keyboard: [[
@@ -53,7 +58,7 @@ export const handler = async (event) => {
       body: JSON.stringify({
         chat_id: TELEGRAM_CHAT_ID,
         text,
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: keyboard,
       }),
     }

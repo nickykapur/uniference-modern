@@ -61,16 +61,15 @@ export const handler = async (event) => {
       body: JSON.stringify({ callback_query_id: callbackId, text, show_alert: false }),
     })
 
-  const editMessage = (newText) =>
+  const editMessage = (prefix) =>
     fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
         message_id: messageId,
-        text: newText,
-        parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: [] }, // remove buttons after action
+        text: `${prefix}\n\n${message?.text ?? ''}`,
+        reply_markup: { inline_keyboard: [] },
       }),
     })
 
@@ -129,12 +128,10 @@ export const handler = async (event) => {
     }
 
     await answerCallback(`✅ ${label} aprobado/a y publicado/a`)
-    const originalText = message?.text ?? ''
-    await editMessage(`✅ *APROBADO/A*\n\n${originalText}`)
+    await editMessage('✅ APROBADO/A')
   } else {
     await answerCallback(`🗑 ${label} rechazado/a`)
-    const originalText = message?.text ?? ''
-    await editMessage(`❌ *RECHAZADO/A*\n\n${originalText}`)
+    await editMessage('❌ RECHAZADO/A')
   }
 
   return { statusCode: 200, body: 'OK' }

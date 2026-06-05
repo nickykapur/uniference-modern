@@ -8,7 +8,13 @@
  *   TELEGRAM_CHAT_ID    — your personal Telegram chat ID
  */
 
-const STAR_LABELS = ['', '⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐']
+const STARS = ['', '⭐', '⭐⭐', '⭐⭐⭐', '⭐⭐⭐⭐', '⭐⭐⭐⭐⭐']
+
+// Escape HTML special chars so user content never breaks the message
+const esc = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
 
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -31,17 +37,17 @@ export const handler = async (event) => {
   const { docId, universidad, profesor, materia, rating, comentario, userEmail } = body
   if (!docId) return { statusCode: 400, body: 'Missing docId' }
 
-  const stars = STAR_LABELS[Math.min(Math.max(Math.round(rating), 0), 5)] ?? '?'
+  const stars = STARS[Math.min(Math.max(Math.round(rating), 0), 5)] ?? '?'
   const author = userEmail ? `@${userEmail.split('@')[0]}` : 'anónimo'
 
   const text =
-    `📋 *Nueva reseña pendiente*\n\n` +
-    `🏫 *Universidad:* ${universidad?.toUpperCase()}\n` +
-    `👤 *Profesor:* ${profesor}\n` +
-    `📚 *Materia:* ${materia}\n` +
-    `${stars} *Calificación:* ${rating}/5\n\n` +
-    `💬 _"${comentario}"_\n\n` +
-    `👤 Enviado por: ${author}`
+    `📋 <b>Nueva reseña pendiente</b>\n\n` +
+    `🏫 <b>Universidad:</b> ${esc(universidad?.toUpperCase())}\n` +
+    `👤 <b>Profesor:</b> ${esc(profesor)}\n` +
+    `📚 <b>Materia:</b> ${esc(materia)}\n` +
+    `${stars} <b>Calificación:</b> ${esc(rating)}/5\n\n` +
+    `💬 <i>"${esc(comentario)}"</i>\n\n` +
+    `👤 Enviado por: ${esc(author)}`
 
   const keyboard = {
     inline_keyboard: [[
@@ -58,7 +64,7 @@ export const handler = async (event) => {
       body: JSON.stringify({
         chat_id: TELEGRAM_CHAT_ID,
         text,
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: keyboard,
       }),
     }
@@ -67,7 +73,7 @@ export const handler = async (event) => {
   if (!res.ok) {
     const err = await res.text()
     console.error('Telegram error:', err)
-    return { statusCode: 502, body: 'Telegram API error' }
+    return { statusCode: 502, body: `Telegram error: ${err}` }
   }
 
   return { statusCode: 200, body: 'OK' }
