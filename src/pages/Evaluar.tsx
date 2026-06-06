@@ -72,6 +72,7 @@ const STEP_LABELS = ['Universidad', 'Profesor', 'Calificación', 'Comentario', '
 export default function Evaluar() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  useEffect(() => { document.title = 'Evaluar Profesor – Deja tu Reseña | Uniference' }, [])
   const { submitReview, loading, error } = useReviews()
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)

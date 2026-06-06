@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /registro
+
+Sitemap: https://uniference.netlify.app/sitemap.xml

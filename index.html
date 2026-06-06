@@ -1,11 +1,85 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Uniference – Rate Your Professors</title>
-    <meta name="description" content="Search and review university professors across Panama. Find the best tutors and share your experience." />
+
+    <!-- Primary SEO -->
+    <title>Uniference – Reseñas de Profesores en Panamá | UTP, UP, Latina, USMA</title>
+    <meta name="description" content="Consulta y comparte reseñas de profesores en las universidades de Panamá: UTP, Universidad de Panamá, Latina, USMA, ISAE y UMECIT. Encuentra tutores y toma mejores decisiones académicas." />
+    <meta name="keywords" content="reseñas profesores Panamá, evaluar profesores UTP, Universidad Tecnológica de Panamá, profesores Universidad Latina Panamá, USMA profesores, Universidad de Panamá reseñas, tutores Panamá, calificar profesores, rate my professor Panama, ISAE, UMECIT" />
+    <meta name="author" content="Uniference" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://uniference.netlify.app/" />
+    <meta http-equiv="content-language" content="es-PA" />
+
+    <!-- Open Graph (Facebook & WhatsApp) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://uniference.netlify.app/" />
+    <meta property="og:title" content="Uniference – Reseñas de Profesores en Panamá" />
+    <meta property="og:description" content="Consulta reseñas reales de profesores en UTP, Universidad de Panamá, Latina, USMA, ISAE y UMECIT. Comparte tu experiencia y ayuda a otros estudiantes a elegir mejor." />
+    <meta property="og:image" content="https://uniference.netlify.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Uniference – Plataforma de reseñas de profesores en Panamá" />
+    <meta property="og:locale" content="es_PA" />
+    <meta property="og:site_name" content="Uniference" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Uniference – Reseñas de Profesores en Panamá" />
+    <meta name="twitter:description" content="Consulta reseñas reales de profesores en UTP, Universidad de Panamá, Latina, USMA, ISAE y UMECIT." />
+    <meta name="twitter:image" content="https://uniference.netlify.app/og-image.png" />
+
+    <!-- Theme / PWA -->
+    <meta name="theme-color" content="#009688" />
+    <meta name="msapplication-TileColor" content="#009688" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+
+    <!-- Structured Data: WebSite with SearchAction -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Uniference",
+      "url": "https://uniference.netlify.app",
+      "description": "Plataforma de reseñas de profesores universitarios en Panamá",
+      "inLanguage": "es-PA",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://uniference.netlify.app/buscar?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- Structured Data: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Uniference",
+      "url": "https://uniference.netlify.app",
+      "logo": "https://uniference.netlify.app/logo.png",
+      "description": "Plataforma de reseñas de profesores universitarios en Panamá. Estudiantes panameños comparten su experiencia en UTP, Universidad de Panamá, Latina, USMA, ISAE y UMECIT.",
+      "areaServed": {
+        "@type": "Country",
+        "name": "Panamá"
+      },
+      "knowsAbout": [
+        "Universidad Tecnológica de Panamá",
+        "Universidad de Panamá",
+        "Universidad Latina de Panamá",
+        "USMA",
+        "ISAE Universidad",
+        "UMECIT"
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -116,6 +116,8 @@ export default function Tutores() {
   const [universidad, setUniversidad] = useState('')
   const [search, setSearch] = useState('')
 
+  useEffect(() => { document.title = 'Tutores Universitarios en Panamá | Uniference' }, [])
+
   useEffect(() => {
     const load = async () => {
       setLoading(true)

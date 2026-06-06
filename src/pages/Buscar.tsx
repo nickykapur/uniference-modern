@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+
+// Dynamic page title for SEO
+const PAGE_TITLE = 'Buscar Profesor – Reseñas de Universidades en Panamá | Uniference'
 import { Search, Loader2, Star, BookOpen, Building2, MessageSquarePlus } from 'lucide-react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -145,6 +148,8 @@ export default function Buscar() {
   const [results, setResults] = useState<Review[] | null>(null)
   const { searchReviews, loading, error, suggestions: fuzzySuggestions } = useReviews()
   const suggestRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { document.title = PAGE_TITLE }, [])
 
   useEffect(() => {
     if (!universidad || profesor.trim().length < 2) { setSuggestions([]); return }

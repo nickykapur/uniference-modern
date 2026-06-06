@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Star, Users, ArrowRight, BookOpen, TrendingUp } from 'lucide-react'
+import { Search, Star, Users, ArrowRight, BookOpen, TrendingUp, MessageSquare, Shield } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 
@@ -18,31 +19,25 @@ const stats = [
   { label: 'Estudiantes activos', value: '800+' },
 ]
 
-const features = [
-  {
-    icon: <Star className="w-7 h-7 text-primary-500" />,
-    title: 'Evalúa a tu profesor',
-    desc: 'Califica con estrellas y deja un comentario detallado sobre tu experiencia en clase.',
-  },
-  {
-    icon: <Search className="w-7 h-7 text-primary-500" />,
-    title: 'Busca antes de inscribirte',
-    desc: 'Revisa las opiniones de otros estudiantes antes de elegir a tu profesor este semestre.',
-  },
-  {
-    icon: <Users className="w-7 h-7 text-primary-500" />,
-    title: 'Encuentra tutores',
-    desc: 'Conecta con tutores disponibles en tu universidad para reforzar lo aprendido.',
-  },
+const UNIS = [
+  { key: 'utp',      name: 'UTP',          full: 'Universidad Tecnológica de Panamá',   bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700',   dot: 'bg-blue-400' },
+  { key: 'nacional', name: 'U. de Panamá', full: 'Universidad de Panamá',               bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-700',    dot: 'bg-red-400' },
+  { key: 'latina',   name: 'Latina',       full: 'Universidad Latina de Panamá',        bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', dot: 'bg-orange-400' },
+  { key: 'usma',     name: 'USMA',         full: 'Univ. Santa María La Antigua',        bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', dot: 'bg-purple-400' },
+  { key: 'isae',     name: 'ISAE',         full: 'ISAE Universidad',                    bg: 'bg-green-50',  border: 'border-green-200',  text: 'text-green-700',  dot: 'bg-green-400' },
+  { key: 'umecit',   name: 'UMECIT',       full: 'UMECIT',                              bg: 'bg-teal-50',   border: 'border-teal-200',   text: 'text-teal-700',   dot: 'bg-teal-400' },
 ]
 
 export default function Home() {
+  useEffect(() => {
+    document.title = 'Uniference – Reseñas de Profesores en Panamá | UTP, UP, Latina, USMA'
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
 
       {/* ── HERO ── */}
-      <section className="relative bg-primary-500 overflow-hidden min-h-[560px] flex items-center">
-        {/* Animated circles */}
+      <section className="relative bg-primary-500 overflow-hidden min-h-[580px] flex items-center">
         <ul className="circles">
           {Array.from({ length: 10 }).map((_, i) => <li key={i} />)}
         </ul>
@@ -61,15 +56,17 @@ export default function Home() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
             className="text-primary-100 text-xs font-semibold uppercase tracking-[0.2em] mb-4"
           >
-            La mejor referencia de tu profesor
+            La referencia estudiantil de Panamá
           </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.7 }}
-            className="text-5xl sm:text-6xl font-extrabold text-white leading-tight mb-5"
+            className="text-5xl sm:text-6xl font-extrabold leading-tight mb-5"
           >
-            Busca. Comenta.{' '}
-            <span className="text-primary-100 underline decoration-wavy decoration-white/40">Apoya.</span>
+            <span className="text-white">Busca. Comenta.</span>{' '}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-emerald-300">
+              Apoya.
+            </span>
           </motion.h1>
 
           <motion.p
@@ -101,7 +98,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── STATS STRIP ── */}
+      {/* ── STATS ── */}
       <section className="bg-primary-700">
         <div className="max-w-5xl mx-auto px-6 py-6 grid grid-cols-2 md:grid-cols-4 gap-4">
           {stats.map((s, i) => (
@@ -117,83 +114,196 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
+      {/* ── BENTO GRID FEATURES ── */}
       <section className="max-w-5xl mx-auto px-6 py-20">
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="text-center mb-12"
         >
           <h2 className="text-3xl font-bold text-gray-900 mb-3">¿Cómo funciona?</h2>
-          <p className="text-gray-500 max-w-lg mx-auto">Todo lo que necesitas para tomar mejores decisiones académicas en un solo lugar.</p>
+          <p className="text-gray-500 max-w-lg mx-auto">Todo lo que necesitas para tomar mejores decisiones académicas.</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {features.map((f, i) => (
-            <motion.div
-              key={f.title}
-              custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
-              className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center hover:shadow-md hover:-translate-y-1 transition-all"
-            >
-              <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                {f.icon}
+        {/* Bento grid: 2 rows, asymmetric */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+          {/* Large card — Search */}
+          <motion.div
+            variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="md:col-span-3 bg-gradient-to-br from-primary-500 to-primary-700 rounded-3xl p-8 text-white flex flex-col justify-between min-h-[220px] hover:shadow-xl hover:-translate-y-1 transition-all"
+          >
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+              <Search className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">Busca antes de inscribirte</h3>
+              <p className="text-primary-100 text-sm leading-relaxed">Revisa opiniones reales de otros estudiantes sobre el profesor antes de elegirlo este semestre.</p>
+            </div>
+            <Link to="/buscar" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-white/80 hover:text-white transition-colors">
+              Buscar ahora <ArrowRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
+
+          {/* Tall card — Rate */}
+          <motion.div
+            variants={fadeUp} custom={1} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="md:col-span-2 bg-amber-50 border border-amber-100 rounded-3xl p-8 flex flex-col justify-between min-h-[220px] hover:shadow-md hover:-translate-y-1 transition-all"
+          >
+            <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center mb-4">
+              <Star className="w-6 h-6 text-amber-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Evalúa a tu profesor</h3>
+              <p className="text-gray-500 text-sm">Califica con estrellas y deja un comentario detallado sobre tu experiencia.</p>
+            </div>
+            <Link to="/evaluar" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600 hover:text-amber-700 transition-colors">
+              Evaluar <ArrowRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
+
+          {/* Small card — Tutors */}
+          <motion.div
+            variants={fadeUp} custom={2} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="md:col-span-2 bg-emerald-50 border border-emerald-100 rounded-3xl p-8 flex flex-col justify-between min-h-[200px] hover:shadow-md hover:-translate-y-1 transition-all"
+          >
+            <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center mb-4">
+              <Users className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Encuentra tutores</h3>
+              <p className="text-gray-500 text-sm">Conecta con estudiantes que ofrecen tutorías en tu universidad.</p>
+            </div>
+            <Link to="/tutores" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition-colors">
+              Ver tutores <ArrowRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
+
+          {/* Wide card — Trusted */}
+          <motion.div
+            variants={fadeUp} custom={3} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="md:col-span-3 bg-gray-900 rounded-3xl p-8 flex flex-col justify-between min-h-[200px] hover:shadow-xl hover:-translate-y-1 transition-all"
+          >
+            <div className="flex gap-3 mb-4">
+              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{f.title}</h3>
-              <p className="text-gray-500 text-sm">{f.desc}</p>
-            </motion.div>
-          ))}
+              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                <MessageSquare className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-2">Reseñas moderadas y verificadas</h3>
+              <p className="text-gray-400 text-sm">Cada reseña pasa por revisión antes de publicarse. Sin spam, sin falsificaciones — solo opiniones reales.</p>
+            </div>
+          </motion.div>
+
         </div>
       </section>
 
-      {/* ── HOW TO USE CTA ── */}
+      {/* ── UNIVERSITIES ── */}
       <section className="bg-gray-50 border-y border-gray-100 py-16">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-            <motion.div
-              variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
-            >
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">¿Eres estudiante en Panamá?</h2>
-              <p className="text-gray-500 mb-6">
-                Uniference te ayuda a conocer a tus profesores antes de inscribirte. Lee lo que otros estudiantes dicen y toma decisiones más inteligentes.
-              </p>
-              <div className="space-y-3">
-                {[
-                  { icon: <BookOpen className="w-5 h-5 text-primary-500" />, text: 'Busca el nombre de tu profesor' },
-                  { icon: <Star className="w-5 h-5 text-primary-500" />, text: 'Lee las calificaciones y comentarios' },
-                  { icon: <TrendingUp className="w-5 h-5 text-primary-500" />, text: 'Elige mejor y apoya a tu comunidad' },
-                ].map((step) => (
-                  <div key={step.text} className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-primary-50 rounded-lg flex items-center justify-center flex-shrink-0">{step.icon}</div>
-                    <span className="text-gray-700 font-medium">{step.text}</span>
-                  </div>
-                ))}
-              </div>
-              <Link
-                to="/buscar"
-                className="inline-flex items-center gap-2 mt-8 bg-primary-500 text-white px-7 py-3.5 rounded-xl font-semibold hover:bg-primary-600 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary-200"
-              >
-                <Search className="w-5 h-5" />
-                Comenzar ahora
-              </Link>
-            </motion.div>
+          <motion.div
+            variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">Universidades en Panamá</h2>
+            <p className="text-gray-500 max-w-lg mx-auto">Cubrimos las principales universidades del país. ¿Estudias en alguna de estas?</p>
+          </motion.div>
 
-            <motion.div
-              variants={fadeUp} custom={1} initial="hidden" whileInView="visible" viewport={{ once: true }}
-              className="grid grid-cols-2 gap-4"
-            >
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {UNIS.map((u, i) => (
+              <motion.div
+                key={u.key}
+                custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+              >
+                <Link
+                  to={`/buscar`}
+                  className={`group flex items-center gap-3 ${u.bg} border ${u.border} rounded-2xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full ${u.dot} flex-shrink-0`} />
+                  <div className="min-w-0">
+                    <p className={`${u.text} font-bold text-sm`}>{u.name}</p>
+                    <p className="text-gray-400 text-xs truncate">{u.full}</p>
+                  </div>
+                  <ArrowRight className={`w-4 h-4 ${u.text} opacity-0 group-hover:opacity-100 ml-auto transition-opacity flex-shrink-0`} />
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW TO USE ── */}
+      <section className="max-w-5xl mx-auto px-6 py-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <motion.div
+            variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+          >
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">¿Eres estudiante en Panamá?</h2>
+            <p className="text-gray-500 mb-8">
+              Uniference te ayuda a conocer a tus profesores antes de inscribirte. Lee lo que otros estudiantes dicen y toma decisiones más inteligentes.
+            </p>
+            <div className="space-y-4">
               {[
-                { uni: 'UTP', color: 'bg-blue-50 border-blue-100', text: 'text-blue-700' },
-                { uni: 'USMA', color: 'bg-purple-50 border-purple-100', text: 'text-purple-700' },
-                { uni: 'U. de Panamá', color: 'bg-green-50 border-green-100', text: 'text-green-700' },
-                { uni: 'U. Latina', color: 'bg-amber-50 border-amber-100', text: 'text-amber-700' },
-                { uni: 'ISAE', color: 'bg-red-50 border-red-100', text: 'text-red-700' },
-                { uni: 'UMECIT', color: 'bg-teal-50 border-teal-100', text: 'text-teal-700' },
-              ].map((u) => (
-                <div key={u.uni} className={`${u.color} border rounded-xl p-4 text-center`}>
-                  <p className={`${u.text} font-semibold text-sm`}>{u.uni}</p>
+                { icon: <BookOpen className="w-5 h-5 text-primary-500" />, text: 'Busca el nombre de tu profesor', sub: 'Por nombre o materia en tu universidad' },
+                { icon: <Star className="w-5 h-5 text-primary-500" />, text: 'Lee las calificaciones y comentarios', sub: 'Reseñas verificadas de otros estudiantes' },
+                { icon: <TrendingUp className="w-5 h-5 text-primary-500" />, text: 'Elige mejor y apoya tu comunidad', sub: 'Comparte tu propia experiencia' },
+              ].map((step) => (
+                <div key={step.text} className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">{step.icon}</div>
+                  <div>
+                    <p className="text-gray-800 font-semibold">{step.text}</p>
+                    <p className="text-gray-400 text-sm">{step.sub}</p>
+                  </div>
                 </div>
               ))}
-            </motion.div>
-          </div>
+            </div>
+            <Link
+              to="/buscar"
+              className="inline-flex items-center gap-2 mt-8 bg-primary-500 text-white px-7 py-3.5 rounded-xl font-semibold hover:bg-primary-600 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary-200"
+            >
+              <Search className="w-5 h-5" />
+              Comenzar ahora
+            </Link>
+          </motion.div>
+
+          <motion.div
+            variants={fadeUp} custom={1} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="bg-gradient-to-br from-primary-50 to-emerald-50 rounded-3xl p-8 border border-primary-100"
+          >
+            <p className="text-xs font-semibold text-primary-400 uppercase tracking-widest mb-4">Reseña de ejemplo</p>
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Prof. García</p>
+                    <p className="text-gray-400 text-xs">Cálculo I · UTP</p>
+                  </div>
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} className={`w-4 h-4 ${s <= 4 ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-gray-600 text-sm italic">"Excelente metodología, explica muy claro y es justo en los exámenes. Muy recomendado."</p>
+              </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 opacity-70">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Prof. Rodríguez</p>
+                    <p className="text-gray-400 text-xs">Física II · UTP</p>
+                  </div>
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} className={`w-4 h-4 ${s <= 5 ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-gray-600 text-sm italic">"El mejor profesor que he tenido. Sus parciales son difíciles pero aprendes mucho."</p>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
