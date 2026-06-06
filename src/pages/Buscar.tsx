@@ -1,9 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-
-// Dynamic page title for SEO
-const PAGE_TITLE = 'Buscar Profesor – Reseñas de Universidades en Panamá | Uniference'
-import { Search, Loader2, Star, BookOpen, Building2, MessageSquarePlus } from 'lucide-react'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { Search, Loader2, Star, BookOpen, Building2, MessageSquarePlus, Mail, X, ExternalLink, Megaphone } from 'lucide-react'
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useReviews } from '../hooks/useReviews'
 import type { Review } from '../types'
@@ -11,6 +8,8 @@ import { UNIVERSIDADES } from '../types'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 import { Link } from 'react-router-dom'
+
+const PAGE_TITLE = 'Buscar Profesor – Reseñas de Universidades en Panamá | Uniference'
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -140,6 +139,198 @@ function AggregateBar({ reviews }: { reviews: Review[] }) {
   )
 }
 
+// ── SPONSOR SLOT ──────────────────────────────────────────────────────────────
+// Replace SPONSOR_NAME, SPONSOR_URL, SPONSOR_TAGLINE with real sponsor info.
+// Set HAS_SPONSOR = true when someone pays. Keep false to show the acquisition CTA.
+const HAS_SPONSOR = false
+const SPONSOR_NAME = 'Academia XYZ'
+const SPONSOR_URL = 'https://example.com'
+const SPONSOR_TAGLINE = 'Clases personalizadas para UTP y Latina'
+const CONTACT_EMAIL = 'hola@uniference.netlify.app' // change to your email
+
+function SponsorSlot({ universidad }: { universidad: string }) {
+  const uniName = UNIVERSIDADES[universidad as keyof typeof UNIVERSIDADES] ?? 'tu universidad'
+  if (HAS_SPONSOR) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+        className="bg-white border border-gray-100 rounded-2xl p-4 mb-6 flex items-center justify-between gap-4 shadow-sm"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded flex-shrink-0">
+            Patrocinado
+          </span>
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-900 text-sm truncate">{SPONSOR_NAME}</p>
+            <p className="text-gray-400 text-xs truncate">{SPONSOR_TAGLINE}</p>
+          </div>
+        </div>
+        <a
+          href={SPONSOR_URL}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          className="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-500 text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary-600 transition-colors"
+        >
+          Ver más <ExternalLink className="w-3 h-3" />
+        </a>
+      </motion.div>
+    )
+  }
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="border border-dashed border-gray-200 rounded-2xl p-4 mb-6 flex items-center justify-between gap-4 bg-gray-50/50"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <Megaphone className="w-4 h-4 text-gray-400" />
+        </div>
+        <div className="min-w-0">
+          <p className="font-medium text-gray-600 text-sm">¿Tu academia llega a estudiantes de {uniName}?</p>
+          <p className="text-gray-400 text-xs">Patrocina esta página durante el semestre</p>
+        </div>
+      </div>
+      <a
+        href={`mailto:${CONTACT_EMAIL}?subject=Patrocinio Uniference&body=Hola, me interesa patrocinar Uniference para llegar a estudiantes de ${uniName}.`}
+        className="flex-shrink-0 inline-flex items-center gap-1.5 border border-gray-300 text-gray-600 text-xs font-semibold px-4 py-2 rounded-xl hover:bg-white hover:border-gray-400 transition-colors"
+      >
+        Contactar
+      </a>
+    </motion.div>
+  )
+}
+
+// ── AFFILIATE LINKS ───────────────────────────────────────────────────────────
+// Sign up at coursera.org/affiliate and udemy.com/affiliate, then replace the IDs.
+const COURSERA_AFFILIATE = 'YOUR_COURSERA_AFFILIATE_ID'  // replace after signing up
+const UDEMY_AFFILIATE    = 'YOUR_UDEMY_AFFILIATE_ID'     // replace after signing up
+
+function AffiliateLinks({ profesor, universidad }: { profesor: string; universidad: string }) {
+  const uniName = UNIVERSIDADES[universidad as keyof typeof UNIVERSIDADES] ?? universidad
+  const keyword = encodeURIComponent(profesor)
+  const courseraUrl = `https://www.coursera.org/search?query=${keyword}&utm_medium=uniference&utm_source=affiliate&siteID=${COURSERA_AFFILIATE}`
+  const udemyUrl    = `https://www.udemy.com/courses/search/?q=${keyword}&utm_source=uniference-aff&affiliate_id=${UDEMY_AFFILIATE}`
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+      className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5 mb-6"
+    >
+      <p className="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-3">Recursos para reforzar</p>
+      <p className="text-sm font-medium text-gray-700 mb-4">
+        ¿Quieres reforzar lo que aprendes en {uniName}? Encuentra cursos online relacionados:
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <a
+          href={courseraUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-between gap-2 bg-white border border-indigo-100 rounded-xl px-4 py-3 hover:border-indigo-300 hover:shadow-sm transition-all group"
+        >
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">Coursera</p>
+            <p className="text-gray-400 text-xs">Cursos universitarios certificados</p>
+          </div>
+          <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 transition-colors flex-shrink-0" />
+        </a>
+        <a
+          href={udemyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-between gap-2 bg-white border border-purple-100 rounded-xl px-4 py-3 hover:border-purple-300 hover:shadow-sm transition-all group"
+        >
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">Udemy</p>
+            <p className="text-gray-400 text-xs">Miles de cursos en español</p>
+          </div>
+          <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-purple-400 transition-colors flex-shrink-0" />
+        </a>
+      </div>
+    </motion.div>
+  )
+}
+
+// ── EMAIL CAPTURE ─────────────────────────────────────────────────────────────
+function EmailCapture({ universidad }: { universidad: string }) {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('email_capture_done') === '1')
+  const uniName = UNIVERSIDADES[universidad as keyof typeof UNIVERSIDADES] ?? 'tu universidad'
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email.trim()) return
+    setStatus('loading')
+    try {
+      await addDoc(collection(db, 'emailList'), {
+        email: email.trim().toLowerCase(),
+        universidad,
+        source: 'buscar',
+        createdAt: serverTimestamp(),
+      })
+      setStatus('done')
+      sessionStorage.setItem('email_capture_done', '1')
+    } catch {
+      setStatus('error')
+    }
+  }
+
+  if (dismissed) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+      className="bg-white border border-gray-100 rounded-2xl p-5 mb-6 shadow-sm relative"
+    >
+      <button
+        onClick={() => { setDismissed(true); sessionStorage.setItem('email_capture_done', '1') }}
+        className="absolute top-4 right-4 text-gray-300 hover:text-gray-500 transition-colors"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {status === 'done' ? (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-2">
+          <p className="text-2xl mb-1">🎉</p>
+          <p className="font-semibold text-gray-900 text-sm">¡Listo! Te avisaremos antes del próximo semestre.</p>
+        </motion.div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 bg-primary-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Mail className="w-4 h-4 text-primary-500" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">Recibe alertas de reseñas</p>
+              <p className="text-gray-400 text-xs">Te avisamos cuando lleguen nuevas reseñas de {uniName}</p>
+            </div>
+          </div>
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="tu@correo.com"
+              required
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={status === 'loading'}
+              className="bg-primary-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Suscribir'}
+            </button>
+          </form>
+          {status === 'error' && <p className="text-red-400 text-xs mt-2">Error al guardar. Intenta de nuevo.</p>}
+          <p className="text-gray-300 text-xs mt-2">Sin spam. Solo antes de cada semestre.</p>
+        </>
+      )}
+    </motion.div>
+  )
+}
+
+// ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function Buscar() {
   const [universidad, setUniversidad] = useState('')
   const [profesor, setProfesor] = useState('')
@@ -182,14 +373,13 @@ export default function Buscar() {
     e.preventDefault()
     if (!universidad || !profesor.trim()) return
     setShowSuggestions(false)
-    // Normalize input so "carlos mendoza" finds "Carlos Mendoza"
     const data = await searchReviews(universidad, profesor.trim())
     setResults(data)
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Teal header with animated circles */}
+      {/* Header */}
       <div className="relative bg-primary-500 pt-12 pb-24 px-4 overflow-hidden">
         <ul className="circles">
           {Array.from({ length: 10 }).map((_, i) => <li key={i} />)}
@@ -206,12 +396,11 @@ export default function Buscar() {
         </div>
       </div>
 
-      {/* Floating search card */}
+      {/* Search card */}
       <div className="max-w-2xl mx-auto px-4 -mt-16 relative z-10">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-white rounded-2xl shadow-xl border border-gray-100">
 
-          {/* University pill selector */}
           <div className="p-5 border-b border-gray-50">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Universidad</p>
             <div className="flex flex-wrap gap-2">
@@ -219,7 +408,7 @@ export default function Buscar() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => { setUniversidad(key); setProfesor(''); setSuggestions([]) }}
+                  onClick={() => { setUniversidad(key); setProfesor(''); setSuggestions([]); setResults(null) }}
                   className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
                     universidad === key ? UNI_ACTIVE[key] : UNI_COLORS[key]
                   }`}
@@ -236,7 +425,6 @@ export default function Buscar() {
             )}
           </div>
 
-          {/* Professor search */}
           <form onSubmit={handleSubmit} className="p-5 space-y-3">
             <div className="relative" ref={suggestRef}>
               <div className="relative">
@@ -281,7 +469,7 @@ export default function Buscar() {
         </motion.div>
       </div>
 
-      {/* Results area */}
+      {/* Results */}
       <div className="max-w-2xl mx-auto px-4 py-8">
         {error && <p className="text-red-500 text-sm text-center mb-6">{error}</p>}
 
@@ -309,16 +497,13 @@ export default function Buscar() {
                 <p className="text-sm font-medium text-gray-500 mb-3">¿Quisiste decir...?</p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {fuzzySuggestions.map(name => (
-                    <button
-                      key={name}
-                      type="button"
+                    <button key={name} type="button"
                       onClick={async () => {
                         setProfesor(name)
                         const data = await searchReviews(universidad, name)
                         setResults(data)
                       }}
-                      className="inline-flex items-center gap-1.5 bg-primary-50 text-primary-700 border border-primary-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-100 transition-colors"
-                    >
+                      className="inline-flex items-center gap-1.5 bg-primary-50 text-primary-700 border border-primary-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-100 transition-colors">
                       <Search className="w-3.5 h-3.5" />
                       {name}
                     </button>
@@ -338,9 +523,19 @@ export default function Buscar() {
         {results !== null && results.length > 0 && (
           <div>
             <AggregateBar reviews={results} />
-            <div className="space-y-4">
+
+            {/* Sponsor slot — always shown when a university is selected */}
+            {universidad && <SponsorSlot universidad={universidad} />}
+
+            <div className="space-y-4 mb-6">
               {results.map((r, i) => <ReviewCard key={r.id} review={r} index={i} />)}
             </div>
+
+            {/* Affiliate links — shown after results */}
+            <AffiliateLinks profesor={profesor} universidad={universidad} />
+
+            {/* Email capture — shown last, dismissible */}
+            <EmailCapture universidad={universidad} />
           </div>
         )}
       </div>

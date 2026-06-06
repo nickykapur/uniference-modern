@@ -6,7 +6,7 @@ export interface Review {
   rating: number
   universidad: string
   userId?: string
-  userEmail?: string
+  userEmail?: string | null
   createdAt?: Date
   aceptado: boolean
 }
