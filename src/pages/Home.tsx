@@ -121,7 +121,7 @@ export default function Home() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl font-bold text-gray-900 mb-3">¿Cómo funciona?</h2>
-          <p className="text-gray-500 max-w-lg mx-auto">Todo lo que necesitas para tomar mejores decisiones académicas.</p>
+          <p className="text-gray-500 max-w-lg mx-auto">Reseñas verificadas, tutores disponibles y búsqueda por universidad.</p>
         </motion.div>
 
         {/* Bento grid: 2 rows, asymmetric */}

@@ -155,8 +155,8 @@ export default function Evaluar() {
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring' }}>
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           </motion.div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">¡Reseña enviada!</h2>
-          <p className="text-gray-500 text-sm mb-6">Tu reseña está en revisión y será publicada pronto. ¡Gracias!</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Reseña enviada</h2>
+          <p className="text-gray-500 text-sm mb-6">Tu reseña está en revisión y será publicada pronto.</p>
           <div className="flex gap-3 justify-center">
             <button onClick={() => { setDone(false); setStep(0); setForm({ universidad: '', profesor: '', materia: '', comentario: '', rating: 0 }) }}
               className="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-xl font-medium hover:bg-gray-200 transition-colors">

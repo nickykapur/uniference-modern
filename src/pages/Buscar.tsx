@@ -291,8 +291,7 @@ function EmailCapture({ universidad }: { universidad: string }) {
 
       {status === 'done' ? (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-2">
-          <p className="text-2xl mb-1">🎉</p>
-          <p className="font-semibold text-gray-900 text-sm">¡Listo! Te avisaremos antes del próximo semestre.</p>
+          <p className="font-semibold text-gray-900 text-sm">Listo. Te avisaremos antes del próximo semestre.</p>
         </motion.div>
       ) : (
         <>

@@ -168,9 +168,9 @@ export default function PostularseTutor() {
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring' }}>
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           </motion.div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">¡Solicitud enviada!</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Solicitud enviada</h2>
           <p className="text-gray-500 text-sm mb-6">
-            Tu perfil está en revisión. Una vez aprobado, aparecerás en la lista de tutores. ¡Gracias!
+            Tu perfil está en revisión. Una vez aprobado, aparecerás en la lista de tutores.
           </p>
           <div className="flex gap-3 justify-center">
             <button onClick={() => navigate('/tutores')}
