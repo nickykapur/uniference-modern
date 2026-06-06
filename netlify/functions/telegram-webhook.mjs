@@ -69,6 +69,7 @@ export const handler = async (event) => {
         chat_id: chatId,
         message_id: messageId,
         text: `${prefix}\n\n${message?.text ?? ''}`,
+        parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [] },
       }),
     })

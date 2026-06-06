@@ -125,7 +125,7 @@ export default function Evaluar() {
       profesor,
       materia,
       userId: user?.uid ?? 'anon',
-      userEmail: user?.email ?? undefined,
+      userEmail: user?.email ?? null,
       aceptado: false,
     })
     // Fire-and-forget: notify admin via Telegram (doesn't block success screen)

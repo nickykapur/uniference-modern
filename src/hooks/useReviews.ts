@@ -57,8 +57,14 @@ export function useReviews() {
         createdAt: Timestamp.now(),
       })
       return docRef.id
-    } catch (e) {
-      setError('Error al enviar la reseña. Intenta de nuevo.')
+    } catch (e: unknown) {
+      const code = (e as { code?: string }).code
+      console.error('Submit review error:', e)
+      if (code === 'permission-denied') {
+        setError('Permiso denegado. Intenta de nuevo o contacta al administrador.')
+      } else {
+        setError('Error al enviar la reseña. Intenta de nuevo.')
+      }
       throw e
     } finally {
       setLoading(false)
