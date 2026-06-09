@@ -16,6 +16,29 @@ const esc = (s) => String(s ?? '')
   .replace(/</g, '&lt;')
   .replace(/>/g, '&gt;')
 
+// Returns the client IP from Netlify request headers (never stored, only used transiently)
+function getClientIP(headers) {
+  return (
+    headers['x-nf-client-connection-ip'] ||
+    (headers['x-forwarded-for'] || '').split(',')[0] ||
+    headers['client-ip'] ||
+    null
+  )?.trim() || null
+}
+
+// Masks the last octet of IPv4 (e.g. 190.30.45.12 → 190.30.45.0)
+// or the last 80 bits of IPv6, so no individual is identifiable
+function anonymizeIP(ip) {
+  if (!ip) return null
+  if (ip.includes(':')) {
+    const parts = ip.split(':')
+    return parts.slice(0, 3).join(':') + '::/48'
+  }
+  const parts = ip.split('.')
+  if (parts.length === 4) return `${parts[0]}.${parts[1]}.${parts[2]}.0`
+  return null
+}
+
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' }
@@ -39,6 +62,7 @@ export const handler = async (event) => {
 
   const stars = STARS[Math.min(Math.max(Math.round(rating), 0), 5)] ?? '?'
   const author = userEmail ? `@${userEmail.split('@')[0]}` : 'anónimo'
+  const anonIP = anonymizeIP(getClientIP(event.headers))
 
   const text =
     `📋 <b>Nueva reseña pendiente</b>\n\n` +
@@ -47,7 +71,8 @@ export const handler = async (event) => {
     `📚 <b>Materia:</b> ${esc(materia)}\n` +
     `${stars} <b>Calificación:</b> ${esc(rating)}/5\n\n` +
     `💬 <i>"${esc(comentario)}"</i>\n\n` +
-    `👤 Enviado por: ${esc(author)}`
+    `👤 Enviado por: ${esc(author)}` +
+    (anonIP ? `\n🌍 IP (anonimizada): <code>${esc(anonIP)}</code>` : '')
 
   const keyboard = {
     inline_keyboard: [[

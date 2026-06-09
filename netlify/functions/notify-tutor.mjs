@@ -9,6 +9,26 @@ const esc = (s) => String(s ?? '')
   .replace(/</g, '&lt;')
   .replace(/>/g, '&gt;')
 
+function getClientIP(headers) {
+  return (
+    headers['x-nf-client-connection-ip'] ||
+    (headers['x-forwarded-for'] || '').split(',')[0] ||
+    headers['client-ip'] ||
+    null
+  )?.trim() || null
+}
+
+function anonymizeIP(ip) {
+  if (!ip) return null
+  if (ip.includes(':')) {
+    const parts = ip.split(':')
+    return parts.slice(0, 3).join(':') + '::/48'
+  }
+  const parts = ip.split('.')
+  if (parts.length === 4) return `${parts[0]}.${parts[1]}.${parts[2]}.0`
+  return null
+}
+
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' }
@@ -31,6 +51,7 @@ export const handler = async (event) => {
 
   const tarifaLabel = tarifa === 'gratis' ? '🎁 Gratis' : `💰 ${precio || 'De pago'}`
   const disponLabel = Array.isArray(disponibilidad) ? disponibilidad.join(', ') : disponibilidad
+  const anonIP = anonymizeIP(getClientIP(event.headers))
 
   const text =
     `🎓 <b>Nueva solicitud de tutor</b>\n\n` +
@@ -41,7 +62,8 @@ export const handler = async (event) => {
     `📱 <b>WhatsApp:</b> ${esc(whatsapp)}\n` +
     `⏰ <b>Disponibilidad:</b> ${esc(disponLabel)}\n` +
     `💵 <b>Tarifa:</b> ${esc(tarifaLabel)}\n\n` +
-    `💬 <i>"${esc(porQueGoodTutor)}"</i>`
+    `💬 <i>"${esc(porQueGoodTutor)}"</i>` +
+    (anonIP ? `\n🌍 IP (anonimizada): <code>${esc(anonIP)}</code>` : '')
 
   const keyboard = {
     inline_keyboard: [[
