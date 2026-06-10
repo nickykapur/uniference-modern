@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Search, Loader2, Star, BookOpen, Building2, MessageSquarePlus, Mail, X, ExternalLink, Megaphone } from 'lucide-react'
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../lib/firebase'
@@ -104,14 +104,33 @@ function ReviewCard({ review, index }: { review: Review; index: number }) {
   )
 }
 
-function AggregateBar({ reviews }: { reviews: Review[] }) {
+function AggregateBar({ profesor, reviews }: { profesor?: string; reviews: Review[] }) {
   const avg = reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
   const dist = [5,4,3,2,1].map(n => ({ star: n, count: reviews.filter(r => r.rating === n).length }))
+  const materias = Array.from(new Set(reviews.map(r => r.materia).filter(Boolean))).slice(0, 3)
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6"
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4 overflow-hidden"
     >
+      {profesor && (
+        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-sm">
+            {profesor.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-bold text-gray-900 text-lg truncate">{profesor}</h2>
+            {materias.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {materias.map(m => (
+                  <span key={m} className="text-xs bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full">{m}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          <RatingBadge value={avg} />
+        </div>
+      )}
       <div className="flex items-center gap-6">
         <div className="text-center flex-shrink-0">
           <p className="text-4xl font-extrabold text-gray-900">{avg.toFixed(1)}</p>
@@ -339,6 +358,15 @@ export default function Buscar() {
   const { searchReviews, loading, error, suggestions: fuzzySuggestions } = useReviews()
   const suggestRef = useRef<HTMLDivElement>(null)
 
+  // Group results by professor so multi-professor matches each get their own
+  // header card with aggregate rating (most-reviewed professor first)
+  const grouped = useMemo(() => {
+    if (!results) return []
+    const map = new Map<string, Review[]>()
+    for (const r of results) map.set(r.profesor, [...(map.get(r.profesor) ?? []), r])
+    return Array.from(map.entries()).sort((a, b) => b[1].length - a[1].length)
+  }, [results])
+
   useEffect(() => { document.title = PAGE_TITLE }, [])
 
   useEffect(() => {
@@ -521,13 +549,18 @@ export default function Buscar() {
 
         {results !== null && results.length > 0 && (
           <div>
-            <AggregateBar reviews={results} />
-
             {/* Sponsor slot — always shown when a university is selected */}
             {universidad && <SponsorSlot universidad={universidad} />}
 
-            <div className="space-y-4 mb-6">
-              {results.map((r, i) => <ReviewCard key={r.id} review={r} index={i} />)}
+            <div className="space-y-8 mb-6">
+              {grouped.map(([name, revs]) => (
+                <div key={name}>
+                  <AggregateBar profesor={name} reviews={revs} />
+                  <div className="space-y-4">
+                    {revs.map((r, i) => <ReviewCard key={r.id} review={r} index={i} />)}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Affiliate links — shown after results */}

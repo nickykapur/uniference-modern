@@ -9,6 +9,7 @@ export interface Review {
   userEmail?: string | null
   createdAt?: Date
   aceptado: boolean
+  rechazado?: boolean
 }
 
 export interface Tutor {
@@ -24,6 +25,7 @@ export interface Tutor {
   precio?: string
   fotoUrl?: string
   aceptado: boolean
+  rechazado?: boolean
   createdAt?: unknown
 }
 

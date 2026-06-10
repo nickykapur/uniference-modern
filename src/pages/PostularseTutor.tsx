@@ -117,7 +117,7 @@ export default function PostularseTutor() {
         fotoUrl = await getDownloadURL(storageRef)
       }
 
-      const docRef = await addDoc(collection(db, 'tutors'), {
+      await addDoc(collection(db, 'tutors'), {
         nombre: form.nombre.trim(),
         universidad: form.universidad,
         carrera: form.carrera.trim(),
@@ -131,24 +131,6 @@ export default function PostularseTutor() {
         aceptado: false,
         createdAt: Timestamp.now(),
       })
-
-      // Notify admin via Telegram (fire-and-forget)
-      fetch('/.netlify/functions/notify-tutor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          docId: docRef.id,
-          nombre: form.nombre.trim(),
-          universidad: form.universidad,
-          carrera: form.carrera.trim(),
-          materia: form.materia.trim(),
-          whatsapp: form.whatsapp.trim(),
-          disponibilidad: form.disponibilidad,
-          tarifa: form.tarifa,
-          precio: form.precio,
-          porQueGoodTutor: form.porQueGoodTutor.trim(),
-        }),
-      }).catch(() => {/* best-effort */})
 
       setDone(true)
     } catch (e) {
