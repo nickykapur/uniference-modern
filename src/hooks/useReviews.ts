@@ -42,6 +42,11 @@ export function fuzzyMatch(query: string, names: string[], topN = 3): string[] {
     .map(({ name }) => name)
 }
 
+export interface ProfessorMatch {
+  profesor: string
+  universidades: string[]
+}
+
 export function useReviews() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -115,5 +120,30 @@ export function useReviews() {
     }
   }
 
-  return { submitReview, searchReviews, loading, error, suggestions }
+  // Searches professor names across all universities (used by the homepage
+  // search bar) so users don't have to pick a university first
+  const searchProfessorsGlobal = async (term: string): Promise<ProfessorMatch[]> => {
+    const q = term.toLowerCase().trim()
+    if (!q) return []
+    try {
+      const snapshot = await getDocs(
+        query(collection(db, 'reviews'), where('aceptado', '==', true))
+      )
+      const map = new Map<string, Set<string>>()
+      for (const doc of snapshot.docs) {
+        const data = doc.data() as Review
+        if (!data.profesor?.toLowerCase().includes(q)) continue
+        const set = map.get(data.profesor) ?? new Set<string>()
+        set.add(data.universidad)
+        map.set(data.profesor, set)
+      }
+      return Array.from(map.entries())
+        .map(([profesor, unis]) => ({ profesor, universidades: Array.from(unis) }))
+        .slice(0, 6)
+    } catch {
+      return []
+    }
+  }
+
+  return { submitReview, searchReviews, searchProfessorsGlobal, loading, error, suggestions }
 }
