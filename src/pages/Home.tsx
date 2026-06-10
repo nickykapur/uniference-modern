@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { Search, Star, Users, ArrowRight, BookOpen, TrendingUp, MessageSquare, Shield } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Search, Star, Users, ArrowRight, BookOpen, TrendingUp, MessageSquare, Shield, Loader2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
+import { useReviews } from '../hooks/useReviews'
+import type { ProfessorMatch } from '../hooks/useReviews'
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 40 },
@@ -29,9 +31,63 @@ const UNIS = [
 ]
 
 export default function Home() {
+  const navigate = useNavigate()
+  const { searchProfessorsGlobal } = useReviews()
+  const [term, setTerm] = useState('')
+  const [matches, setMatches] = useState<ProfessorMatch[]>([])
+  const [searching, setSearching] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     document.title = 'Uniference – Reseñas de Profesores en Panamá | UTP, UP, Latina, USMA'
   }, [])
+
+  // Live search across all universities as the user types
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (term.trim().length < 2) {
+        setMatches([])
+        setSearching(false)
+        return
+      }
+      setSearching(true)
+      const results = await searchProfessorsGlobal(term)
+      setMatches(results)
+      setSearching(false)
+      setShowSuggestions(true)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [term, searchProfessorsGlobal])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSuggestions(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Auto-select the university if the professor only teaches at one;
+  // otherwise send the matching universities along so Buscar can prompt
+  const goToProfessor = (match: ProfessorMatch) => {
+    setShowSuggestions(false)
+    if (match.universidades.length === 1) {
+      navigate('/buscar', { state: { profesor: match.profesor, universidad: match.universidades[0], autoSearch: true } })
+    } else {
+      navigate('/buscar', { state: { profesor: match.profesor, universidades: match.universidades } })
+    }
+  }
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!term.trim()) return
+    if (matches.length > 0) {
+      goToProfessor(matches[0])
+    } else {
+      navigate('/buscar', { state: { profesor: term.trim() } })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -78,21 +134,74 @@ export default function Home() {
 
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            className="max-w-xl mx-auto relative"
+            ref={searchRef}
+          >
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                onFocus={() => matches.length > 0 && setShowSuggestions(true)}
+                placeholder="Busca el nombre de tu profesor…"
+                autoComplete="off"
+                className="w-full bg-white rounded-2xl pl-12 pr-12 py-4 text-gray-900 placeholder-gray-400 shadow-2xl focus:outline-none focus:ring-4 focus:ring-white/30 transition-all text-base"
+              />
+              {searching && (
+                <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-400 animate-spin" />
+              )}
+            </form>
+
+            <AnimatePresence>
+              {showSuggestions && matches.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                  className="absolute z-30 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl overflow-hidden text-left"
+                >
+                  {matches.map(m => (
+                    <button key={m.profesor} type="button" onClick={() => goToProfessor(m)}
+                      className="w-full flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-primary-50 transition-colors border-b border-gray-50 last:border-0">
+                      <span className="font-semibold text-gray-800 truncate">{m.profesor}</span>
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        {m.universidades.map(u => (
+                          <span key={u} className="text-[10px] font-bold uppercase bg-primary-50 text-primary-600 px-2 py-0.5 rounded-full">
+                            {u}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {showSuggestions && term.trim().length >= 2 && !searching && matches.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                className="absolute z-30 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl px-5 py-4 text-left text-sm text-gray-500"
+              >
+                Sin resultados para "{term}". Presiona Enter para buscar manualmente.
+              </motion.div>
+            )}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 }}
+            className="flex flex-col sm:flex-row gap-3 justify-center mt-6"
           >
             <Link
               to="/buscar"
-              className="inline-flex items-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary-50 transition-all shadow-xl hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-1.5 text-primary-100 hover:text-white text-sm font-semibold transition-colors"
             >
-              <Search className="w-5 h-5" />
-              Buscar Profesor
+              Explorar por universidad <ArrowRight className="w-4 h-4" />
             </Link>
+            <span className="hidden sm:inline text-primary-300">·</span>
             <Link
               to="/evaluar"
-              className="inline-flex items-center gap-2 bg-primary-700 text-white border border-white/20 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary-900 transition-all hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-1.5 text-primary-100 hover:text-white text-sm font-semibold transition-colors"
             >
-              Dejar una reseña
-              <ArrowRight className="w-5 h-5" />
+              Dejar una reseña <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         </div>

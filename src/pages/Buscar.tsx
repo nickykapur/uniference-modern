@@ -7,7 +7,7 @@ import type { Review } from '../types'
 import { UNIVERSIDADES } from '../types'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 const PAGE_TITLE = 'Buscar Profesor – Reseñas de Universidades en Panamá | Uniference'
 
@@ -355,8 +355,10 @@ export default function Buscar() {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [results, setResults] = useState<Review[] | null>(null)
+  const [highlightUnis, setHighlightUnis] = useState<string[]>([])
   const { searchReviews, loading, error, suggestions: fuzzySuggestions } = useReviews()
   const suggestRef = useRef<HTMLDivElement>(null)
+  const location = useLocation()
 
   // Group results by professor so multi-professor matches each get their own
   // header card with aggregate rating (most-reviewed professor first)
@@ -368,6 +370,32 @@ export default function Buscar() {
   }, [results])
 
   useEffect(() => { document.title = PAGE_TITLE }, [])
+
+  // Handle a professor search coming from the homepage search bar:
+  // auto-select + auto-search if the professor is at one university,
+  // or highlight the matching universities so the user can pick
+  useEffect(() => {
+    const state = location.state as
+      | { profesor?: string; universidad?: string; universidades?: string[]; autoSearch?: boolean }
+      | null
+    if (!state?.profesor) return
+
+    const t = setTimeout(() => {
+      setProfesor(state.profesor!)
+
+      if (state.universidad && state.autoSearch) {
+        setUniversidad(state.universidad)
+        searchReviews(state.universidad, state.profesor!).then(setResults)
+      } else if (state.universidades?.length) {
+        setHighlightUnis(state.universidades)
+      }
+    }, 0)
+
+    // Clear the navigation state so a page refresh doesn't repeat this
+    window.history.replaceState({}, document.title)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!universidad || profesor.trim().length < 2) { setSuggestions([]); return }
@@ -430,15 +458,32 @@ export default function Buscar() {
 
           <div className="p-5 border-b border-gray-50">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Universidad</p>
+            {highlightUnis.length > 0 && (
+              <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                className="text-xs text-primary-600 bg-primary-50 rounded-lg px-3 py-2 mb-3">
+                ✨ <strong>{profesor}</strong> tiene reseñas en {highlightUnis.map(u => u.toUpperCase()).join(' y ')} — selecciona una para ver
+              </motion.p>
+            )}
             <div className="flex flex-wrap gap-2">
               {Object.entries(UNIVERSIDADES).map(([key]) => (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => { setUniversidad(key); setProfesor(''); setSuggestions([]); setResults(null) }}
+                  onClick={async () => {
+                    setUniversidad(key)
+                    setSuggestions([])
+                    if (highlightUnis.includes(key) && profesor.trim()) {
+                      setHighlightUnis([])
+                      setResults(await searchReviews(key, profesor.trim()))
+                    } else {
+                      setProfesor('')
+                      setResults(null)
+                      setHighlightUnis([])
+                    }
+                  }}
                   className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
                     universidad === key ? UNI_ACTIVE[key] : UNI_COLORS[key]
-                  }`}
+                  } ${highlightUnis.includes(key) ? 'ring-2 ring-primary-400 ring-offset-1' : ''}`}
                 >
                   {key.toUpperCase()}
                 </button>
