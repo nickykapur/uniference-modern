@@ -307,10 +307,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="bg-primary-500 py-8 text-center text-sm text-primary-100">
-        © {new Date().getFullYear()} Uniference · Hecho para estudiantes panameños
-      </footer>
     </div>
   )
 }
