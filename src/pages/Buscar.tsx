@@ -410,7 +410,6 @@ export default function Buscar() {
             .filter(n => n.toLowerCase().includes(profesor.toLowerCase()))
         )).slice(0, 6)
         setSuggestions(names)
-        setShowSuggestions(names.length > 0)
       } catch { setSuggestions([]) }
     }, 300)
     return () => clearTimeout(timer)
