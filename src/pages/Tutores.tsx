@@ -16,22 +16,8 @@ const cardVariants: Variants = {
   }),
 }
 
-const UNI_COLORS: Record<string, string> = {
-  utp:      'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100',
-  latina:   'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100',
-  nacional: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100',
-  usma:     'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100',
-  isae:     'bg-green-50 border-green-200 text-green-700 hover:bg-green-100',
-  umecit:   'bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100',
-}
-const UNI_ACTIVE: Record<string, string> = {
-  utp:      'bg-blue-500 border-blue-500 text-white',
-  latina:   'bg-orange-500 border-orange-500 text-white',
-  nacional: 'bg-red-500 border-red-500 text-white',
-  usma:     'bg-purple-500 border-purple-500 text-white',
-  isae:     'bg-green-500 border-green-500 text-white',
-  umecit:   'bg-teal-500 border-teal-500 text-white',
-}
+const UNI_CHIP = 'bg-white border-gray-200 text-gray-600 hover:border-primary-300 hover:bg-primary-50/60'
+const UNI_CHIP_ACTIVE = 'bg-primary-500 border-primary-500 text-white shadow-sm'
 
 function TutorCard({ tutor, index }: { tutor: Tutor; index: number }) {
   const univName = UNIVERSIDADES[tutor.universidad as keyof typeof UNIVERSIDADES] ?? tutor.universidad
@@ -178,7 +164,7 @@ export default function Tutores() {
             {Object.entries(UNIVERSIDADES).map(([key]) => (
               <button key={key} type="button" onClick={() => setUniversidad(universidad === key ? '' : key)}
                 className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                  universidad === key ? UNI_ACTIVE[key] : UNI_COLORS[key]
+                  universidad === key ? UNI_CHIP_ACTIVE : UNI_CHIP
                 }`}>
                 {key.toUpperCase()}
               </button>
