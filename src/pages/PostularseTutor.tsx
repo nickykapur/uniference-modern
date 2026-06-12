@@ -11,22 +11,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '../lib/firebase'
 import { UNIVERSIDADES } from '../types'
 
-const UNI_COLORS: Record<string, string> = {
-  utp:      'border-blue-200 hover:bg-blue-50 hover:border-blue-400',
-  latina:   'border-orange-200 hover:bg-orange-50 hover:border-orange-400',
-  nacional: 'border-red-200 hover:bg-red-50 hover:border-red-400',
-  usma:     'border-purple-200 hover:bg-purple-50 hover:border-purple-400',
-  isae:     'border-green-200 hover:bg-green-50 hover:border-green-400',
-  umecit:   'border-teal-200 hover:bg-teal-50 hover:border-teal-400',
-}
-const UNI_ACTIVE: Record<string, string> = {
-  utp:      'border-blue-500 bg-blue-50 text-blue-700',
-  latina:   'border-orange-500 bg-orange-50 text-orange-700',
-  nacional: 'border-red-500 bg-red-50 text-red-700',
-  usma:     'border-purple-500 bg-purple-50 text-purple-700',
-  isae:     'border-green-500 bg-green-50 text-green-700',
-  umecit:   'border-teal-500 bg-teal-50 text-teal-700',
-}
+const UNI_CHIP = 'border-gray-100 text-gray-700 hover:bg-primary-50 hover:border-primary-300'
+const UNI_CHIP_ACTIVE = 'border-primary-500 bg-primary-50 text-primary-700'
 
 const DISPONIBILIDAD_OPTIONS = [
   'Lunes a Viernes (mañanas)',
@@ -218,7 +204,7 @@ export default function PostularseTutor() {
                       <button key={key} type="button"
                         onClick={() => set('universidad', key)}
                         className={`p-3 rounded-xl border-2 text-left transition-all ${
-                          form.universidad === key ? UNI_ACTIVE[key] : `border-gray-100 ${UNI_COLORS[key]}`
+                          form.universidad === key ? UNI_CHIP_ACTIVE : UNI_CHIP
                         }`}>
                         <p className="font-bold text-sm">{key.toUpperCase()}</p>
                         <p className="text-xs opacity-70 mt-0.5 leading-tight">{name}</p>

@@ -37,6 +37,7 @@ export default function Home() {
   const [matches, setMatches] = useState<ProfessorMatch[]>([])
   const [searching, setSearching] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [lastQuery, setLastQuery] = useState('')
   const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function Home() {
       setSearching(true)
       const results = await searchProfessorsGlobal(term)
       setMatches(results)
+      setLastQuery(term.trim())
       setSearching(false)
       setShowSuggestions(true)
     }, 300)
@@ -176,7 +178,7 @@ export default function Home() {
               )}
             </AnimatePresence>
 
-            {showSuggestions && term.trim().length >= 2 && !searching && matches.length === 0 && (
+            {showSuggestions && term.trim().length >= 2 && !searching && matches.length === 0 && lastQuery === term.trim() && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                 className="absolute z-30 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl px-5 py-4 text-left text-sm text-gray-500"
