@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { Home, Search, Star, Users, LogOut, LogIn, ShieldCheck, ChevronDown } from 'lucide-react'
+import { Home, Search, Star, Users, LogOut, LogIn, ShieldCheck, ChevronDown, GraduationCap } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { isAdminEmail } from '../lib/admins'
 
@@ -59,6 +59,11 @@ function AccountMenu() {
             <p className="text-sm font-semibold text-gray-900 truncate">{user.displayName ?? 'Estudiante'}</p>
             <p className="text-xs text-gray-400 truncate">{user.email}</p>
           </div>
+          <Link to="/estudiante" onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <GraduationCap className="w-4 h-4" />
+            Mi portal
+          </Link>
           {isAdmin && (
             <Link to="/admin" onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-primary-600 hover:bg-primary-50 transition-colors">
