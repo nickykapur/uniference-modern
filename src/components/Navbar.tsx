@@ -7,6 +7,7 @@ import { isAdminEmail } from '../lib/admins'
 const NAV_LINKS = [
   { to: '/buscar', label: 'Buscar Profesor' },
   { to: '/tutores', label: 'Tutores' },
+  { to: '/futuro', label: 'Visión' },
 ]
 
 const TABS = [
