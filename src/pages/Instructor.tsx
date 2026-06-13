@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 import {
@@ -365,6 +366,19 @@ export default function Instructor() {
                       Vista previa
                       <ArrowRight className="w-4 h-4" />
                     </button>
+                  </div>
+                  <div className="mt-4 border-t border-gray-100 pt-4">
+                    {/* TODO: conectar botón de suscripción con checkout real cuando la pasarela de pago esté disponible. */}
+                    <Link
+                      to="/suscripciones"
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+                    >
+                      Suscribirme por $15/hora
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <p className="text-xs text-gray-400 mt-2">
+                      El pago y la activación de la suscripción se conectarán en una integración posterior.
+                    </p>
                   </div>
                 </div>
               </div>
