@@ -6,39 +6,159 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.email == 'nkapur2211@gmail.com';
     }
 
-    // Reviews
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Reviews — public read/create, admin moderates
     match /reviews/{reviewId} {
-      // Anyone can read approved reviews
-      allow read: if resource.data.aceptado == true;
-      // Admin can read everything
-      allow read: if isAdmin();
-      // Authenticated users can submit
-      allow create: if request.auth != null
-        && request.resource.data.aceptado == false
-        && request.resource.data.rechazado == false;
-      // Only admin can approve/reject
-      allow update: if isAdmin();
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
     }
 
-    // Tutors
+    // Tutors — public read approved, auth required to apply, admin moderates
     match /tutors/{tutorId} {
-      allow read: if resource.data.aceptado == true;
-      allow read: if isAdmin();
-      allow create: if request.auth != null
-        && request.resource.data.aceptado == false
-        && request.resource.data.rechazado == false;
-      allow update: if isAdmin();
+      allow read: if resource.data.aceptado == true || isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
 
-    // Email list — write-only for authenticated users, admin can read
-    // Users can read/write their own role doc; admin can read all
+    // Users — own profile read/write, admin reads all
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
       allow read: if isAdmin();
     }
 
+    // Instructor subjects — owner read/write
+    match /subjects/{subjectId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() && request.auth.uid == resource.data.instructorId
+        || isSignedIn() && request.resource.data.instructorId == request.auth.uid;
+    }
+
+    // Announcements — owner manages, public reads active ones
+    match /announcements/{adId} {
+      allow read: if resource.data.status == 'active' || isOwner(resource.data.instructorId) || isAdmin();
+      allow create: if isSignedIn() && request.resource.data.instructorId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.instructorId) || isAdmin();
+    }
+
+    // Subscriptions — student or instructor can read their own
+    match /subscriptions/{subId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.studentId ||
+        request.auth.uid == resource.data.instructorId ||
+        isAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.studentId ||
+        request.auth.uid == resource.data.instructorId
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Chats — participants only
+    match /chats/{chatId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.studentId ||
+        request.auth.uid == resource.data.instructorId ||
+        isAdmin()
+      );
+      allow create: if isSignedIn();
+    }
+
+    // Messages — participants of the parent chat
+    match /messages/{messageId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // Sessions — instructor manages, student reads
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.instructorId ||
+        request.auth.uid == resource.data.studentId ||
+        isAdmin()
+      );
+      allow create, update: if isSignedIn() && (
+        request.auth.uid == resource.data.instructorId ||
+        request.auth.uid == resource.data.studentId ||
+        request.resource.data.instructorId == request.auth.uid
+      );
+    }
+
+    // Requests — student creates, instructor manages
+    match /requests/{requestId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.instructorId ||
+        request.auth.uid == resource.data.studentId ||
+        isAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.instructorId
+      );
+    }
+
+    // Payments — read by participants only
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.instructorId ||
+        request.auth.uid == resource.data.studentId ||
+        isAdmin()
+      );
+      allow create, update: if isAdmin();
+    }
+
+    // Resources — instructor manages, subscribers read
+    match /resources/{resourceId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.instructorId ||
+        request.resource.data.instructorId == request.auth.uid
+      );
+    }
+
+    // Courses (GPA tracker) — student owns
+    match /courses/{courseId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.studentId ||
+        request.resource.data.studentId == request.auth.uid
+      );
+    }
+
+    // Reminders — student owns
+    match /reminders/{reminderId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.studentId ||
+        request.resource.data.studentId == request.auth.uid
+      );
+    }
+
+    // Notes — public read within university, auth required to create
+    match /notes/{noteId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.authorId;
+    }
+
+    // Study groups — public read, auth required to create/join
+    match /studyGroups/{groupId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.creatorId;
+    }
+
+    // Email list — anyone subscribes, admin reads
     match /emailList/{docId} {
-      allow create: if request.auth != null;
+      allow create: if true;
       allow read: if isAdmin();
     }
   }

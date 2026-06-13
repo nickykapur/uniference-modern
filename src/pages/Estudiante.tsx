@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
@@ -6,7 +6,7 @@ import {
   ArrowRight,
   BookOpenCheck,
   GraduationCap,
-  Pencil,
+  Loader2,
   Search,
   Sparkles,
   Star,
@@ -14,6 +14,11 @@ import {
   UserRound,
   Users,
 } from 'lucide-react'
+import { collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore'
+import { db } from '../lib/firebase'
+import { getUserProfile } from '../lib/profile'
+import { getStudentSubscriptions } from '../lib/subscriptions'
+import type { Subscription } from '../lib/subscriptions'
 import { useAuth } from '../context/AuthContext'
 
 const fadeUp: Variants = {
@@ -32,68 +37,20 @@ const menuItems = [
   { href: '#accesos', label: 'Accesos rápidos', icon: ArrowRight },
 ]
 
-const subscribedInstructors = [
-  {
-    name: 'Ana Rodríguez',
-    subject: 'Cálculo I',
-    university: 'UTP',
-    status: 'Activo',
-  },
-  {
-    name: 'Carlos Méndez',
-    subject: 'Programación',
-    university: 'Universidad de Panamá',
-    status: 'Activo',
-  },
-  {
-    name: 'Mariana Torres',
-    subject: 'Estadística',
-    university: 'USMA',
-    status: 'Pendiente',
-  },
-]
-
-const studentReviews = [
-  {
-    professor: 'Roberto García',
-    subject: 'Física I',
-    rating: 4.5,
-    comment: 'Explica con claridad y suele dar buenos ejemplos para los parciales.',
-  },
-  {
-    professor: 'Elena Vargas',
-    subject: 'Matemáticas Discretas',
-    rating: 5,
-    comment: 'Muy buena metodología y bastante organizada con el contenido.',
-  },
-]
-
 const quickLinks = [
-  {
-    to: '/buscar',
-    title: 'Buscar Profesor',
-    text: 'Encuentra reseñas antes de inscribirte.',
-    icon: Search,
-  },
-  {
-    to: '/tutores',
-    title: 'Buscar Tutores',
-    text: 'Conecta con estudiantes que pueden ayudarte.',
-    icon: Users,
-  },
-  {
-    to: '/evaluar',
-    title: 'Evaluar',
-    text: 'Comparte tu experiencia con la comunidad.',
-    icon: Star,
-  },
-  {
-    to: '/estudiante/vida-universitaria',
-    title: 'Vida universitaria',
-    text: 'Organiza tu semestre con GPA, grupos, apuntes y fechas clave.',
-    icon: BookOpenCheck,
-  },
+  { to: '/buscar', title: 'Buscar Profesor', text: 'Encuentra reseñas antes de inscribirte.', icon: Search },
+  { to: '/tutores', title: 'Buscar Tutores', text: 'Conecta con estudiantes que pueden ayudarte.', icon: Users },
+  { to: '/evaluar', title: 'Evaluar', text: 'Comparte tu experiencia con la comunidad.', icon: Star },
+  { to: '/estudiante/vida-universitaria', title: 'Vida universitaria', text: 'Organiza tu semestre con GPA, grupos, apuntes y fechas clave.', icon: BookOpenCheck },
 ]
+
+interface Review {
+  id: string
+  profesor: string
+  materia: string
+  rating: number
+  comentario?: string
+}
 
 function RatingStars({ rating }: { rating: number }) {
   return (
@@ -104,7 +61,7 @@ function RatingStars({ rating }: { rating: number }) {
           className={`w-4 h-4 ${star <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`}
         />
       ))}
-      <span className="ml-1 text-xs font-bold text-gray-500">{rating.toFixed(1)}</span>
+      <span className="ml-1 text-xs font-bold text-gray-500">{Number(rating).toFixed(1)}</span>
     </div>
   )
 }
@@ -116,19 +73,51 @@ export default function Estudiante() {
   const initialSource = user?.displayName?.trim() || user?.email || 'E'
   const initial = initialSource.charAt(0).toUpperCase()
 
+  const [profile, setProfile] = useState({ university: '', career: '', semester: '' })
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   useEffect(() => {
     document.title = 'Portal del estudiante | Uniference'
   }, [])
 
-  // TODO: conectar perfil del estudiante con Firestore cuando esté disponible.
-  const profile = {
-    name: displayName,
-    email,
-    university: 'Universidad Tecnológica de Panamá',
-    career: 'Ingeniería de Software',
-    semester: '3er año / 2do semestre',
-    status: 'Perfil en construcción',
+  useEffect(() => {
+    if (!user) return
+    const uid = user.uid
+    Promise.all([
+      getUserProfile(uid),
+      getStudentSubscriptions(uid),
+      getDocs(query(collection(db, 'reviews'), where('userId', '==', uid))),
+    ]).then(([prof, subs, snap]) => {
+      setProfile({
+        university: prof.university ?? '',
+        career: prof.career ?? '',
+        semester: prof.semester ?? '',
+      })
+      setSubscriptions(subs)
+      setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() } as Review)))
+    }).finally(() => setLoading(false))
+  }, [user])
+
+  async function handleDeleteReview(id: string) {
+    setDeletingId(id)
+    try {
+      await deleteDoc(doc(db, 'reviews', id))
+      setReviews(prev => prev.filter(r => r.id !== id))
+    } finally {
+      setDeletingId(null)
+    }
   }
+
+  const profileFields: [string, string][] = [
+    ['Nombre', displayName],
+    ['Correo', email],
+    ['Universidad', profile.university || '—'],
+    ['Carrera', profile.career || '—'],
+    ['Año/Semestre', profile.semester || '—'],
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -202,198 +191,203 @@ export default function Estudiante() {
           ))}
         </motion.nav>
 
-        <section id="perfil" className="scroll-mt-24 mb-8">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8"
-          >
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex md:flex-col items-center md:items-start gap-4 md:w-52 flex-shrink-0">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center text-2xl font-extrabold shadow-md">
-                  {initial}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
-                    Perfil
-                  </p>
-                  <h2 className="text-2xl font-extrabold text-gray-900">Perfil del estudiante</h2>
-                </div>
-              </div>
-
-              <div className="flex-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[
-                    ['Nombre', profile.name],
-                    ['Correo', profile.email],
-                    ['Universidad', profile.university],
-                    ['Carrera', profile.career],
-                    ['Año/Semestre', profile.semester],
-                    ['Estado', profile.status],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-2xl bg-gray-50 border border-gray-100 p-4">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-                      <p className="text-sm font-semibold text-gray-800">{value}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400 mt-4">
-                  Estos datos serán editables cuando la configuración de cuenta esté disponible.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </section>
-
-        <section id="instructores" className="scroll-mt-24 mb-8">
-          <div className="flex items-end justify-between gap-4 mb-4">
-            <div>
-              <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
-                Seguimiento
-              </p>
-              <h2 className="text-2xl font-extrabold text-gray-900">Mis instructores</h2>
-            </div>
-            <Link to="/tutores" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:text-primary-700">
-              Ver tutores
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
           </div>
-
-          {/* TODO: reemplazar instructores mock por suscripciones reales del estudiante. */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {subscribedInstructors.map((instructor, i) => (
-              <motion.article
-                key={instructor.name}
-                custom={i}
+        ) : (
+          <>
+            <section id="perfil" className="scroll-mt-24 mb-8">
+              <motion.div
                 variants={fadeUp}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8"
               >
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-700 flex items-center justify-center font-extrabold flex-shrink-0">
-                    {instructor.name.charAt(0)}
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex md:flex-col items-center md:items-start gap-4 md:w-52 flex-shrink-0">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center text-2xl font-extrabold shadow-md">
+                      {initial}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">Perfil</p>
+                      <h2 className="text-2xl font-extrabold text-gray-900">Perfil del estudiante</h2>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-gray-900 truncate">{instructor.name}</h3>
-                    <p className="text-sm text-gray-500">{instructor.subject}</p>
+
+                  <div className="flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {profileFields.map(([label, value]) => (
+                        <div key={label} className="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+                          <p className="text-sm font-semibold text-gray-800">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-4">
+                      Edita tu perfil desde{' '}
+                      <Link to="/perfil" className="text-primary-500 underline hover:text-primary-600">
+                        Configuración de cuenta
+                      </Link>.
+                    </p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-400 mb-4">{instructor.university}</p>
-                <div className="flex items-center justify-between gap-3">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    instructor.status === 'Activo'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {instructor.status}
-                  </span>
-                  <Link
-                    to="/tutores"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700"
-                  >
-                    Ver perfil
-                    <ArrowRight className="w-3.5 h-3.5" />
+              </motion.div>
+            </section>
+
+            <section id="instructores" className="scroll-mt-24 mb-8">
+              <div className="flex items-end justify-between gap-4 mb-4">
+                <div>
+                  <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">Seguimiento</p>
+                  <h2 className="text-2xl font-extrabold text-gray-900">Mis instructores</h2>
+                </div>
+                <Link to="/tutores" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:text-primary-700">
+                  Ver tutores
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+
+              {subscriptions.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 text-center">
+                  <p className="text-gray-400 text-sm">No tienes suscripciones activas todavía.</p>
+                  <Link to="/tutores" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:text-primary-700">
+                    Buscar tutores <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
-              </motion.article>
-            ))}
-          </div>
-        </section>
-
-        <section id="resenas" className="scroll-mt-24 mb-8">
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
-              Aportes
-            </p>
-            <h2 className="text-2xl font-extrabold text-gray-900">Mis reseñas</h2>
-          </div>
-
-          {/* TODO: conectar reseñas reales del usuario y acciones de editar/eliminar. */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {studentReviews.map((review, i) => (
-              <motion.article
-                key={review.professor}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
-              >
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <h3 className="font-bold text-gray-900">{review.professor}</h3>
-                    <p className="text-sm text-gray-400">{review.subject}</p>
-                  </div>
-                  <RatingStars rating={review.rating} />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {subscriptions.map((sub, i) => (
+                    <motion.article
+                      key={sub.id}
+                      custom={i}
+                      variants={fadeUp}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true }}
+                      className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                    >
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-700 flex items-center justify-center font-extrabold flex-shrink-0">
+                          {sub.instructorName.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-gray-900 truncate">{sub.instructorName}</h3>
+                          <p className="text-sm text-gray-500">{sub.subject}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400 mb-4">{sub.price}</p>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                          sub.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {sub.status === 'active' ? 'Activo' : sub.status === 'pending' ? 'Pendiente' : 'Cancelado'}
+                        </span>
+                        <Link
+                          to={`/chat/${sub.id}`}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700"
+                        >
+                          Abrir chat
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
+                    </motion.article>
+                  ))}
                 </div>
-                <blockquote className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-2xl px-4 py-3 border-l-4 border-primary-400 mb-4">
-                  "{review.comment}"
-                </blockquote>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-400 bg-gray-50 cursor-not-allowed"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 px-3 py-2 text-sm font-semibold text-red-300 bg-red-50 cursor-not-allowed"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Eliminar
-                  </button>
+              )}
+            </section>
+
+            <section id="resenas" className="scroll-mt-24 mb-8">
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">Aportes</p>
+                <h2 className="text-2xl font-extrabold text-gray-900">Mis reseñas</h2>
+              </div>
+
+              {reviews.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 text-center">
+                  <p className="text-gray-400 text-sm">No has escrito reseñas todavía.</p>
+                  <Link to="/evaluar" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:text-primary-700">
+                    Evaluar un profesor <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
-                <p className="text-xs text-gray-400 mt-3">Acciones próximamente.</p>
-              </motion.article>
-            ))}
-          </div>
-        </section>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {reviews.map((review, i) => (
+                    <motion.article
+                      key={review.id}
+                      custom={i}
+                      variants={fadeUp}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true }}
+                      className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
+                    >
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div>
+                          <h3 className="font-bold text-gray-900">{review.profesor}</h3>
+                          <p className="text-sm text-gray-400">{review.materia}</p>
+                        </div>
+                        <RatingStars rating={review.rating} />
+                      </div>
+                      {review.comentario && (
+                        <blockquote className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-2xl px-4 py-3 border-l-4 border-primary-400 mb-4">
+                          "{review.comentario}"
+                        </blockquote>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteReview(review.id)}
+                        disabled={deletingId === review.id}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 px-3 py-2 text-sm font-semibold text-red-500 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        {deletingId === review.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Trash2 className="w-4 h-4" />
+                        }
+                        Eliminar
+                      </button>
+                    </motion.article>
+                  ))}
+                </div>
+              )}
+            </section>
 
-        <section id="accesos" className="scroll-mt-24">
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
-              Herramientas
-            </p>
-            <h2 className="text-2xl font-extrabold text-gray-900">Accesos rápidos</h2>
-          </div>
+            <section id="accesos" className="scroll-mt-24">
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">Herramientas</p>
+                <h2 className="text-2xl font-extrabold text-gray-900">Accesos rápidos</h2>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickLinks.map(({ to, title, text, icon: Icon }, i) => (
-              <motion.div
-                key={to}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-              >
-                <Link
-                  to={to}
-                  className="group h-full bg-white rounded-3xl border border-gray-100 shadow-sm p-5 flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed flex-1">{text}</p>
-                  <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 group-hover:text-primary-700">
-                    Abrir
-                    <ArrowRight className="w-4 h-4" />
-                  </span>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </section>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {quickLinks.map(({ to, title, text, icon: Icon }, i) => (
+                  <motion.div
+                    key={to}
+                    custom={i}
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                  >
+                    <Link
+                      to={to}
+                      className="group h-full bg-white rounded-3xl border border-gray-100 shadow-sm p-5 flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mb-4">
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
+                      <p className="text-sm text-gray-500 leading-relaxed flex-1">{text}</p>
+                      <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 group-hover:text-primary-700">
+                        Abrir
+                        <ArrowRight className="w-4 h-4" />
+                      </span>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
       </main>
     </div>
   )

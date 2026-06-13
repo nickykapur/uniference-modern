@@ -9,16 +9,22 @@ import {
   BookOpenCheck,
   Calculator,
   CalendarDays,
+  Check,
   CheckCircle2,
   Columns3,
   FileText,
   GraduationCap,
+  Loader2,
+  Plus,
   Search,
   Star,
   Trash2,
   Upload,
   Users,
+  X,
 } from 'lucide-react'
+import { getUserProfile, saveUserProfile } from '../lib/profile'
+import { useAuth } from '../context/AuthContext'
 
 type TabKey = 'gpa' | 'calendario' | 'apuntes' | 'grupos' | 'recordatorios' | 'comparador'
 type CourseKey = 'calculo' | 'programacion' | 'fisica'
@@ -211,19 +217,49 @@ function VisualActionButton({ label, onClick, tone = 'neutral' }: {
   )
 }
 
+type CourseEntry = { name: string; credits: number; grade: number }
+type ReminderEntry = { id: string; title: string; date: string; status: string }
+
+const defaultCourses: Record<CourseKey, CourseEntry> = {
+  calculo: { name: 'Cálculo I', credits: 4, grade: 91 },
+  programacion: { name: 'Programación I', credits: 3, grade: 95 },
+  fisica: { name: 'Física I', credits: 4, grade: 87 },
+}
+
 export default function VidaUniversitaria() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<TabKey>('gpa')
   const [university, setUniversity] = useState(universities[0])
   const [calendarUniversity, setCalendarUniversity] = useState('UTP')
-  const [courses, setCourses] = useState<Record<CourseKey, { name: string; credits: number; grade: number }>>({
-    calculo: { name: 'Cálculo I', credits: 4, grade: 91 },
-    programacion: { name: 'Programación I', credits: 3, grade: 95 },
-    fisica: { name: 'Física I', credits: 4, grade: 87 },
-  })
+  const [courses, setCourses] = useState<Record<CourseKey, CourseEntry>>(defaultCourses)
+  const [userReminders, setUserReminders] = useState<ReminderEntry[]>([])
+  const [newReminder, setNewReminder] = useState({ title: '', date: '' })
+  const [showReminderForm, setShowReminderForm] = useState(false)
+  const [savingGpa, setSavingGpa] = useState(false)
+  const [savedGpa, setSavedGpa] = useState(false)
+
 
   useEffect(() => {
     document.title = 'Vida universitaria | Uniference'
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+    getUserProfile(user.uid).then(prof => {
+      if (prof.gpaData) {
+        try {
+          const parsed = JSON.parse(prof.gpaData)
+          if (parsed && typeof parsed === 'object') setCourses(parsed)
+        } catch { /* ignore */ }
+      }
+      if (prof.remindersData) {
+        try {
+          const parsed = JSON.parse(prof.remindersData)
+          if (Array.isArray(parsed)) setUserReminders(parsed)
+        } catch { /* ignore */ }
+      }
+    })
+  }, [user])
 
   const gpa = useMemo(() => {
     const values = Object.values(courses)
@@ -243,6 +279,37 @@ export default function VidaUniversitaria() {
       },
     }))
   }
+
+  async function handleSaveGpa() {
+    if (!user) return
+    setSavingGpa(true)
+    try {
+      await saveUserProfile(user.uid, { gpaData: JSON.stringify(courses) })
+      setSavedGpa(true)
+      setTimeout(() => setSavedGpa(false), 2000)
+    } finally {
+      setSavingGpa(false)
+    }
+  }
+
+  async function handleAddReminder() {
+    if (!user || !newReminder.title.trim()) return
+    const entry: ReminderEntry = { id: Date.now().toString(), title: newReminder.title.trim(), date: newReminder.date, status: 'Activo' }
+    const updated = [entry, ...userReminders]
+    setUserReminders(updated)
+    setNewReminder({ title: '', date: '' })
+    setShowReminderForm(false)
+    await saveUserProfile(user.uid, { remindersData: JSON.stringify(updated) })
+  }
+
+  async function handleDeleteReminder(id: string) {
+    if (!user) return
+    const updated = userReminders.filter(r => r.id !== id)
+    setUserReminders(updated)
+    await saveUserProfile(user.uid, { remindersData: JSON.stringify(updated) })
+  }
+
+  const allReminders = [...userReminders, ...reminders.map(r => ({ ...r, id: `static-${r.title}` }))]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -407,9 +474,15 @@ export default function VidaUniversitaria() {
                   <div className="mt-4">
                     <Badge tone="bg-green-100 text-green-700">{gpaStatus}</Badge>
                   </div>
-                  <p className="text-xs text-primary-700/70 leading-relaxed mt-4">
-                    Resultado local para explorar la experiencia. No guarda datos ni reemplaza la escala oficial de tu universidad.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={handleSaveGpa}
+                    disabled={savingGpa}
+                    className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors disabled:opacity-70"
+                  >
+                    {savingGpa ? <Loader2 className="w-4 h-4 animate-spin" /> : savedGpa ? <Check className="w-4 h-4" /> : null}
+                    {savedGpa ? 'Guardado' : 'Guardar GPA'}
+                  </button>
                 </aside>
               </div>
             </motion.div>
@@ -653,32 +726,73 @@ export default function VidaUniversitaria() {
                   description="Mantén visibles parciales, entregas y periodos de matrícula importantes."
                 />
 
-                {/* TODO: conectar recordatorios con notificaciones reales y preferencias del usuario. */}
+                <div className="flex justify-end mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowReminderForm(v => !v)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agregar recordatorio
+                  </button>
+                </div>
+
+                {showReminderForm && (
+                  <div className="rounded-3xl border border-primary-100 bg-primary-50/50 p-4 mb-4 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                    <label className="block">
+                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Título</span>
+                      <input
+                        value={newReminder.title}
+                        onChange={e => setNewReminder(p => ({ ...p, title: e.target.value }))}
+                        placeholder="Ej. Parcial de Física"
+                        className="w-full rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Fecha</span>
+                      <input
+                        type="date"
+                        value={newReminder.date}
+                        onChange={e => setNewReminder(p => ({ ...p, date: e.target.value }))}
+                        className="w-full rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                      />
+                    </label>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={handleAddReminder} className="inline-flex items-center gap-1.5 rounded-xl bg-primary-500 px-4 py-3 text-sm font-semibold text-white hover:bg-primary-600 transition-colors">
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button type="button" onClick={() => setShowReminderForm(false)} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3">
-                  {reminders.map((reminder) => (
-                    <article
-                      key={reminder.title}
-                      className="grid grid-cols-1 lg:grid-cols-[1fr_100px_120px_auto] gap-3 items-center rounded-2xl border border-gray-100 bg-gray-50 p-4"
-                    >
-                      <div>
-                        <h3 className="font-extrabold text-gray-900">{reminder.title}</h3>
-                        <p className="text-sm text-gray-500">Fecha: {reminder.date}</p>
-                      </div>
-                      <p className="text-sm font-bold text-primary-700">{reminder.remaining}</p>
-                      <Badge>{reminder.status}</Badge>
-                      <div className="flex flex-wrap gap-2">
-                        <VisualActionButton label="Listo" onClick={() => console.log('Complete reminder placeholder', reminder)} />
-                        <VisualActionButton label="Editar" onClick={() => console.log('Edit reminder placeholder', reminder)} />
-                        <button
-                          type="button"
-                          onClick={() => console.log('Delete reminder placeholder', reminder)}
-                          className="inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-500 hover:bg-red-100 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </article>
-                  ))}
+                  {allReminders.map((reminder) => {
+                    const isUserReminder = !reminder.id.startsWith('static-')
+                    return (
+                      <article
+                        key={reminder.id}
+                        className="grid grid-cols-1 lg:grid-cols-[1fr_120px_auto] gap-3 items-center rounded-2xl border border-gray-100 bg-gray-50 p-4"
+                      >
+                        <div>
+                          <h3 className="font-extrabold text-gray-900">{reminder.title}</h3>
+                          <p className="text-sm text-gray-500">Fecha: {reminder.date}</p>
+                        </div>
+                        <Badge>{reminder.status}</Badge>
+                        {isUserReminder && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteReminder(reminder.id)}
+                            className="inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-500 hover:bg-red-100 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </article>
+                    )
+                  })}
                 </div>
               </div>
 

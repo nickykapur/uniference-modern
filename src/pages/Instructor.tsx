@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
@@ -8,18 +8,24 @@ import {
   BookOpen,
   BriefcaseBusiness,
   CalendarDays,
+  Check,
   Crown,
   DollarSign,
+  Loader2,
   Megaphone,
-  Pencil,
   Plus,
+  Save,
   Sparkles,
   Star,
   Trash2,
   UserRoundCheck,
   Users,
   Wrench,
+  X,
 } from 'lucide-react'
+import { getUserProfile, saveUserProfile } from '../lib/profile'
+import type { UserProfile } from '../lib/profile'
+import { getInstructorSubscriptions } from '../lib/subscriptions'
 import { useAuth } from '../context/AuthContext'
 
 const fadeUp: Variants = {
@@ -39,67 +45,18 @@ const menuItems = [
   { href: '#disponibilidad', label: 'Disponibilidad', icon: CalendarDays },
 ]
 
-const subjects = [
-  {
-    name: 'Programación I',
-    description: 'Fundamentos de lógica, variables, ciclos y resolución de problemas.',
-    price: '$15/hora',
-    status: 'Activa',
-  },
-  {
-    name: 'Cálculo I',
-    description: 'Límites, derivadas y práctica para parciales.',
-    price: '$12/sesión',
-    status: 'Activa',
-  },
-  {
-    name: 'Estructuras de Datos',
-    description: 'Listas, pilas, colas, árboles y análisis básico de complejidad.',
-    price: '$18/hora',
-    status: 'Borrador',
-  },
+const defaultAvailability = [
+  { day: 'Lunes', time: '', available: false },
+  { day: 'Martes', time: '', available: false },
+  { day: 'Miércoles', time: '', available: false },
+  { day: 'Jueves', time: '', available: false },
+  { day: 'Viernes', time: '', available: false },
+  { day: 'Sábado', time: '', available: false },
+  { day: 'Domingo', time: '', available: false },
 ]
 
-const stats = [
-  { label: 'Estudiantes suscritos', value: '24', icon: Users, tone: 'bg-primary-50 text-primary-600' },
-  { label: 'Ingresos estimados', value: '$360', icon: DollarSign, tone: 'bg-emerald-50 text-emerald-600' },
-  { label: 'Calificación promedio', value: '4.8', icon: Star, tone: 'bg-amber-50 text-amber-600' },
-  { label: 'Materias activas', value: '3', icon: BookOpen, tone: 'bg-blue-50 text-blue-600' },
-]
-
-const availability = [
-  { day: 'Lunes', time: '6:00 p.m. - 8:00 p.m.', available: true },
-  { day: 'Martes', time: 'No disponible', available: false },
-  { day: 'Miércoles', time: '5:00 p.m. - 7:00 p.m.', available: true },
-  { day: 'Jueves', time: '6:00 p.m. - 8:00 p.m.', available: true },
-  { day: 'Viernes', time: 'No disponible', available: false },
-  { day: 'Sábado', time: '9:00 a.m. - 12:00 p.m.', available: true },
-  { day: 'Domingo', time: 'No disponible', available: false },
-]
-
-// TODO: reemplazar estado premium mock por estado real del instructor desde Firestore/subscription billing.
-const isPremiumInstructor = true
-
-function DisabledActionButton({ icon: Icon, label, danger = false }: {
-  icon: typeof Pencil
-  label: string
-  danger?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      disabled
-      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold cursor-not-allowed ${
-        danger
-          ? 'border-red-100 bg-red-50 text-red-300'
-          : 'border-gray-200 bg-gray-50 text-gray-400'
-      }`}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-    </button>
-  )
-}
+type Subject = NonNullable<UserProfile['subjects']>[number]
+type AvailabilitySlot = NonNullable<UserProfile['availability']>[number]
 
 export default function Instructor() {
   const { user } = useAuth()
@@ -108,20 +65,106 @@ export default function Instructor() {
   const initialSource = user?.displayName?.trim() || user?.email || 'I'
   const initial = initialSource.charAt(0).toUpperCase()
 
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  const [bio, setBio] = useState('')
+  const [universities, setUniversities] = useState('')
+  const [experience, setExperience] = useState('')
+  const [specialty, setSpecialty] = useState('')
+  const [isPremium, setIsPremium] = useState(false)
+  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>(defaultAvailability)
+
+  const [stats, setStats] = useState({ students: 0, revenue: '$0', activeSubjects: 0 })
+
+  const [newSubject, setNewSubject] = useState({ name: '', description: '', price: '', unit: 'hora' })
+  const [showNewSubjectForm, setShowNewSubjectForm] = useState(false)
+
   useEffect(() => {
     document.title = 'Portal del instructor | Uniference'
   }, [])
 
-  // TODO: conectar perfil del instructor con Firestore cuando esté disponible.
-  const profile = {
-    name: displayName,
-    email,
-    bio: 'Estudiante avanzado con experiencia ayudando a compañeros a comprender temas complejos de forma simple.',
-    universities: 'Universidad Tecnológica de Panamá, Universidad de Panamá',
-    experience: '2 años',
-    specialty: 'Programación y matemáticas',
-    status: 'Perfil en construcción',
+  useEffect(() => {
+    if (!user) return
+    const uid = user.uid
+    Promise.all([
+      getUserProfile(uid),
+      getInstructorSubscriptions(uid),
+    ]).then(([prof, subs]) => {
+      setBio(prof.bio ?? '')
+      setUniversities(prof.universities ?? '')
+      setExperience(prof.experience ?? '')
+      setSpecialty(prof.specialty ?? '')
+      setIsPremium(prof.isPremium ?? false)
+      setSubjects(prof.subjects ?? [])
+      if (prof.availability && prof.availability.length > 0) {
+        setAvailability(prof.availability)
+      } else {
+        setAvailability(defaultAvailability)
+      }
+
+      const active = subs.filter(s => s.status === 'active').length
+      const revenue = subs
+        .filter(s => s.status === 'active')
+        .reduce((sum, s) => {
+          const match = s.price.match(/\$?([\d.]+)/)
+          return sum + (match ? parseFloat(match[1]) : 0)
+        }, 0)
+      const activeSubjectCount = (prof.subjects ?? []).filter(s => s.status === 'active').length
+      setStats({ students: active, revenue: `$${revenue.toFixed(0)}`, activeSubjects: activeSubjectCount })
+    }).finally(() => setLoading(false))
+  }, [user])
+
+  async function handleSaveProfile() {
+    if (!user) return
+    setSaving(true)
+    try {
+      await saveUserProfile(user.uid, { bio, universities, experience, specialty, subjects, availability })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } finally {
+      setSaving(false)
+    }
   }
+
+  function handleAddSubject() {
+    if (!newSubject.name.trim()) return
+    const subject: Subject = {
+      id: Date.now().toString(),
+      name: newSubject.name.trim(),
+      description: newSubject.description.trim(),
+      price: newSubject.price.trim(),
+      unit: newSubject.unit,
+      status: 'active',
+    }
+    const updated = [...subjects, subject]
+    setSubjects(updated)
+    setNewSubject({ name: '', description: '', price: '', unit: 'hora' })
+    setShowNewSubjectForm(false)
+    if (user) saveUserProfile(user.uid, { subjects: updated })
+  }
+
+  function handleDeleteSubject(id: string) {
+    const updated = subjects.filter(s => s.id !== id)
+    setSubjects(updated)
+    if (user) saveUserProfile(user.uid, { subjects: updated })
+  }
+
+  function toggleAvailability(day: string) {
+    setAvailability(prev => prev.map(s => s.day === day ? { ...s, available: !s.available } : s))
+  }
+
+  function updateAvailabilityTime(day: string, time: string) {
+    setAvailability(prev => prev.map(s => s.day === day ? { ...s, time } : s))
+  }
+
+  const statCards = [
+    { label: 'Estudiantes suscritos', value: String(stats.students), icon: Users, tone: 'bg-primary-50 text-primary-600' },
+    { label: 'Ingresos estimados', value: stats.revenue, icon: DollarSign, tone: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Materias activas', value: String(stats.activeSubjects), icon: BookOpen, tone: 'bg-blue-50 text-blue-600' },
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -209,7 +252,7 @@ export default function Instructor() {
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <h2 className="text-2xl font-extrabold text-gray-900">Instructor Premium</h2>
-                  {isPremiumInstructor && (
+                  {isPremium && (
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold rounded-full bg-amber-100 text-amber-700 px-2.5 py-1">
                       <BadgeCheck className="w-3.5 h-3.5" />
                       Premium
@@ -247,291 +290,332 @@ export default function Instructor() {
           </div>
         </motion.section>
 
-        <section id="perfil" className="scroll-mt-24 mb-8">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8"
-          >
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex md:flex-col items-center md:items-start gap-4 md:w-52 flex-shrink-0">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center text-2xl font-extrabold shadow-md">
-                  {initial}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
-                    Perfil
-                  </p>
-                  <h2 className="text-2xl font-extrabold text-gray-900">Perfil del instructor</h2>
-                </div>
-              </div>
-
-              <div className="flex-1 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[
-                    ['Nombre', profile.name],
-                    ['Correo', profile.email],
-                    ['Universidad(es)', profile.universities],
-                    ['Años de experiencia', profile.experience],
-                    ['Especialidad principal', profile.specialty],
-                    ['Estado', profile.status],
-                  ].map(([label, value]) => (
-                    <label key={label} className="block">
-                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-                        {label}
-                      </span>
-                      <input
-                        value={value}
-                        disabled
-                        className="w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 disabled:opacity-100"
-                        readOnly
-                      />
-                    </label>
-                  ))}
-                </div>
-                <label className="block">
-                  <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-                    Bio
-                  </span>
-                  <textarea
-                    value={profile.bio}
-                    disabled
-                    rows={3}
-                    className="w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 resize-none disabled:opacity-100"
-                    readOnly
-                  />
-                </label>
-                <p className="text-xs text-gray-400">
-                  Estos datos serán editables cuando la configuración del instructor esté disponible.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </section>
-
-        <section id="materias" className="scroll-mt-24 mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
-            <div>
-              <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
-                Oferta
-              </p>
-              <h2 className="text-2xl font-extrabold text-gray-900">Materias que enseñas</h2>
-            </div>
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-50 px-4 py-2.5 text-sm font-semibold text-primary-400 cursor-not-allowed"
-            >
-              <Plus className="w-4 h-4" />
-              Agregar materia
-            </button>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
           </div>
-
-          {/* TODO: reemplazar materias mock por CRUD real conectado a Firestore. */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {subjects.map((subject, i) => (
-              <motion.article
-                key={subject.name}
-                custom={i}
+        ) : (
+          <>
+            <section id="perfil" className="scroll-mt-24 mb-8">
+              <motion.div
                 variants={fadeUp}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8"
               >
-                <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-700 flex items-center justify-center mb-4">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <h3 className="font-bold text-gray-900">{subject.name}</h3>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    subject.status === 'Activa'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {subject.status}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 leading-relaxed mb-4">{subject.description}</p>
-                <p className="text-sm font-extrabold text-gray-900 mb-4">{subject.price}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <DisabledActionButton icon={Pencil} label="Editar" />
-                  <DisabledActionButton icon={Trash2} label="Eliminar" danger />
-                </div>
-              </motion.article>
-            ))}
-          </div>
-        </section>
-
-        <section id="vista-publica" className="scroll-mt-24 mb-8">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden"
-          >
-            <div className="h-2 bg-gradient-to-r from-primary-400 to-primary-600" />
-            <div className="p-6 sm:p-8">
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-6 items-start">
-                <div>
-                  <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-2">
-                    Vista pública
-                  </p>
-                  <h2 className="text-2xl font-extrabold text-gray-900 mb-3">
-                    Cómo verán tu perfil los estudiantes
-                  </h2>
-                  <p className="text-sm text-gray-500 leading-relaxed">
-                    Esta vista será la referencia pública que los estudiantes consultarán antes de solicitar apoyo.
-                  </p>
-                </div>
-
-                <div className="rounded-3xl bg-gray-50 border border-gray-100 p-5">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center text-xl font-extrabold shadow-sm">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex md:flex-col items-center md:items-start gap-4 md:w-52 flex-shrink-0">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center text-2xl font-extrabold shadow-md">
                       {initial}
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-extrabold text-gray-900 truncate">{profile.name}</h3>
-                        {isPremiumInstructor && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 px-2 py-0.5">
-                            <Crown className="w-3 h-3" />
-                            Verificado
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400">Universidad Tecnológica de Panamá</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star key={star} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                        ))}
-                        <span className="text-xs font-bold text-gray-500">4.8</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed mb-4">{profile.bio}</p>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {['Programación I', 'Cálculo I', 'Estructuras de Datos'].map((subject) => (
-                      <span key={subject} className="text-xs font-semibold rounded-full bg-primary-50 text-primary-700 px-2.5 py-1">
-                        {subject}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs text-gray-400">Desde</p>
-                      <p className="font-extrabold text-gray-900">$12/sesión</p>
+                      <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">Perfil</p>
+                      <h2 className="text-2xl font-extrabold text-gray-900">Perfil del instructor</h2>
                     </div>
+                  </div>
+
+                  <div className="flex-1 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {[
+                        { label: 'Nombre', value: displayName, disabled: true, onChange: undefined },
+                        { label: 'Correo', value: email, disabled: true, onChange: undefined },
+                        { label: 'Universidad(es)', value: universities, disabled: false, onChange: (v: string) => setUniversities(v) },
+                        { label: 'Años de experiencia', value: experience, disabled: false, onChange: (v: string) => setExperience(v) },
+                        { label: 'Especialidad principal', value: specialty, disabled: false, onChange: (v: string) => setSpecialty(v) },
+                      ].map(({ label, value, disabled, onChange }) => (
+                        <label key={label} className="block">
+                          <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{label}</span>
+                          <input
+                            value={value}
+                            disabled={disabled}
+                            onChange={onChange ? e => onChange(e.target.value) : undefined}
+                            className="w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors disabled:opacity-100"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <label className="block">
+                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Bio</span>
+                      <textarea
+                        value={bio}
+                        onChange={e => setBio(e.target.value)}
+                        rows={3}
+                        className="w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors"
+                      />
+                    </label>
                     <button
                       type="button"
-                      disabled
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-primary-500/50 px-4 py-2 text-sm font-semibold text-white cursor-not-allowed"
+                      onClick={handleSaveProfile}
+                      disabled={saving}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors disabled:opacity-70"
                     >
-                      Vista previa
-                      <ArrowRight className="w-4 h-4" />
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                      {saved ? 'Guardado' : 'Guardar perfil'}
                     </button>
                   </div>
-                  <div className="mt-4 border-t border-gray-100 pt-4">
-                    {/* TODO: conectar botón de suscripción con checkout real cuando la pasarela de pago esté disponible. */}
-                    <Link
-                      to="/suscripciones"
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
-                    >
-                      Suscribirme por $15/hora
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                    <p className="text-xs text-gray-400 mt-2">
-                      El pago y la activación de la suscripción se conectarán en una integración posterior.
-                    </p>
-                  </div>
                 </div>
+              </motion.div>
+            </section>
+
+            <section id="materias" className="scroll-mt-24 mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
+                <div>
+                  <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">Oferta</p>
+                  <h2 className="text-2xl font-extrabold text-gray-900">Materias que enseñas</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewSubjectForm(v => !v)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar materia
+                </button>
               </div>
-              {/* TODO: conectar vista pública con perfil real del instructor. */}
-            </div>
-          </motion.div>
-        </section>
 
-        <section id="estadisticas" className="scroll-mt-24 mb-8">
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
-              Dashboard
-            </p>
-            <h2 className="text-2xl font-extrabold text-gray-900">Estadísticas básicas</h2>
-          </div>
+              {showNewSubjectForm && (
+                <motion.div
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="visible"
+                  className="bg-white rounded-3xl border border-primary-100 shadow-sm p-5 mb-4"
+                >
+                  <h3 className="font-bold text-gray-900 mb-4">Nueva materia</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    {[
+                      { label: 'Nombre', value: newSubject.name, key: 'name' },
+                      { label: 'Precio (ej. $15)', value: newSubject.price, key: 'price' },
+                    ].map(({ label, value, key }) => (
+                      <label key={key} className="block">
+                        <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{label}</span>
+                        <input
+                          value={value}
+                          onChange={e => setNewSubject(prev => ({ ...prev, [key]: e.target.value }))}
+                          className="w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors"
+                        />
+                      </label>
+                    ))}
+                    <label className="block sm:col-span-2">
+                      <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Descripción</span>
+                      <input
+                        value={newSubject.description}
+                        onChange={e => setNewSubject(prev => ({ ...prev, description: e.target.value }))}
+                        className="w-full rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleAddSubject}
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+                    >
+                      <Check className="w-4 h-4" />
+                      Agregar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewSubjectForm(false)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                      Cancelar
+                    </button>
+                  </div>
+                </motion.div>
+              )}
 
-          {/* TODO: conectar estadísticas reales cuando existan suscripciones y pagos. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {stats.map(({ label, value, icon: Icon, tone }, i) => (
+              {subjects.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 text-center">
+                  <p className="text-gray-400 text-sm">No has agregado materias todavía.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {subjects.map((subject, i) => (
+                    <motion.article
+                      key={subject.id}
+                      custom={i}
+                      variants={fadeUp}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true }}
+                      className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-700 flex items-center justify-center mb-4">
+                        <BookOpen className="w-6 h-6" />
+                      </div>
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <h3 className="font-bold text-gray-900">{subject.name}</h3>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                          subject.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {subject.status === 'active' ? 'Activa' : 'Borrador'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500 leading-relaxed mb-4">{subject.description}</p>
+                      <p className="text-sm font-extrabold text-gray-900 mb-4">{subject.price}/{subject.unit}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSubject(subject.id)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-500 hover:bg-red-100 transition-colors w-full"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar
+                      </button>
+                    </motion.article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section id="vista-publica" className="scroll-mt-24 mb-8">
               <motion.div
-                key={label}
-                custom={i}
                 variants={fadeUp}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
+                className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden"
               >
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center mb-4 ${tone}`}>
-                  <Icon className="w-5 h-5" />
+                <div className="h-2 bg-gradient-to-r from-primary-400 to-primary-600" />
+                <div className="p-6 sm:p-8">
+                  <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-6 items-start">
+                    <div>
+                      <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-2">Vista pública</p>
+                      <h2 className="text-2xl font-extrabold text-gray-900 mb-3">Cómo verán tu perfil los estudiantes</h2>
+                      <p className="text-sm text-gray-500 leading-relaxed">
+                        Esta vista será la referencia pública que los estudiantes consultarán antes de solicitar apoyo.
+                      </p>
+                    </div>
+
+                    <div className="rounded-3xl bg-gray-50 border border-gray-100 p-5">
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center text-xl font-extrabold shadow-sm">
+                          {initial}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-extrabold text-gray-900 truncate">{displayName}</h3>
+                            {isPremium && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 px-2 py-0.5">
+                                <Crown className="w-3 h-3" />
+                                Verificado
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400">{universities || 'Universidad'}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 leading-relaxed mb-4">{bio || 'Sin bio todavía.'}</p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {subjects.filter(s => s.status === 'active').slice(0, 3).map((s) => (
+                          <span key={s.id} className="text-xs font-semibold rounded-full bg-primary-50 text-primary-700 px-2.5 py-1">
+                            {s.name}
+                          </span>
+                        ))}
+                      </div>
+                      {subjects.length > 0 && (
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs text-gray-400">Desde</p>
+                            <p className="font-extrabold text-gray-900">{subjects[0].price}/{subjects[0].unit}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-3xl font-extrabold text-gray-900">{value}</p>
-                <p className="text-sm text-gray-500 mt-1">{label}</p>
               </motion.div>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 mt-3">
-            Estadísticas de ejemplo. Se actualizarán cuando existan suscripciones reales.
-          </p>
-        </section>
+            </section>
 
-        <section id="disponibilidad" className="scroll-mt-24">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
-            <div>
-              <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
-                Horario
-              </p>
-              <h2 className="text-2xl font-extrabold text-gray-900">Disponibilidad semanal</h2>
-            </div>
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-400 cursor-not-allowed"
-            >
-              <Pencil className="w-4 h-4" />
-              Editar disponibilidad
-            </button>
-          </div>
+            <section id="estadisticas" className="scroll-mt-24 mb-8">
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">Dashboard</p>
+                <h2 className="text-2xl font-extrabold text-gray-900">Estadísticas</h2>
+              </div>
 
-          {/* TODO: conectar disponibilidad real del instructor con Firestore. */}
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-              {availability.map((slot) => (
-                <div
-                  key={slot.day}
-                  className={`rounded-2xl border p-4 ${
-                    slot.available
-                      ? 'border-primary-100 bg-primary-50/70'
-                      : 'border-gray-100 bg-gray-50'
-                  }`}
-                >
-                  <p className="font-bold text-gray-900 mb-1">{slot.day}</p>
-                  <p className={`text-sm leading-relaxed ${slot.available ? 'text-primary-700' : 'text-gray-400'}`}>
-                    {slot.time}
-                  </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {statCards.map(({ label, value, icon: Icon, tone }, i) => (
+                  <motion.div
+                    key={label}
+                    custom={i}
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
+                  >
+                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center mb-4 ${tone}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <p className="text-3xl font-extrabold text-gray-900">{value}</p>
+                    <p className="text-sm text-gray-500 mt-1">{label}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+
+            <section id="disponibilidad" className="scroll-mt-24">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
+                <div>
+                  <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">Horario</p>
+                  <h2 className="text-2xl font-extrabold text-gray-900">Disponibilidad semanal</h2>
                 </div>
-              ))}
-            </div>
-          </motion.div>
-        </section>
+                <button
+                  type="button"
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Guardar disponibilidad
+                </button>
+              </div>
+
+              <motion.div
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+                  {availability.map((slot) => (
+                    <div
+                      key={slot.day}
+                      className={`rounded-2xl border p-4 ${
+                        slot.available ? 'border-primary-100 bg-primary-50/70' : 'border-gray-100 bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-bold text-gray-900 text-sm">{slot.day}</p>
+                        <button
+                          type="button"
+                          onClick={() => toggleAvailability(slot.day)}
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            slot.available ? 'border-primary-500 bg-primary-500' : 'border-gray-300 bg-white'
+                          }`}
+                        >
+                          {slot.available && <Check className="w-3 h-3 text-white" />}
+                        </button>
+                      </div>
+                      {slot.available ? (
+                        <input
+                          value={slot.time}
+                          onChange={e => updateAvailabilityTime(slot.day, e.target.value)}
+                          placeholder="Ej. 6pm - 8pm"
+                          className="w-full text-xs bg-transparent border-none outline-none text-primary-700 font-semibold placeholder-primary-300"
+                        />
+                      ) : (
+                        <p className="text-xs text-gray-400">No disponible</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </section>
+          </>
+        )}
       </main>
     </div>
   )

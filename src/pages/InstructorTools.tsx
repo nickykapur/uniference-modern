@@ -16,6 +16,9 @@ import {
   Upload,
   Wrench,
 } from 'lucide-react'
+import { getInstructorSubscriptions } from '../lib/subscriptions'
+import type { Subscription } from '../lib/subscriptions'
+import { useAuth } from '../context/AuthContext'
 
 type TabKey = 'calendario' | 'solicitudes' | 'pagos' | 'materiales' | 'resenas'
 
@@ -70,22 +73,6 @@ const weeklySessions = [
   },
 ]
 
-const requests = [
-  {
-    student: 'Sofía Martínez',
-    subject: 'Cálculo I',
-    note: 'Necesito repasar derivadas antes del parcial.',
-    schedule: 'Miércoles 6:00 p.m.',
-    status: 'Pendiente',
-  },
-  {
-    student: 'Carlos Ruiz',
-    subject: 'Programación I',
-    note: 'Quiero apoyo con ciclos y funciones.',
-    schedule: 'Sábado 11:00 a.m.',
-    status: 'Pendiente',
-  },
-]
 
 const payments = [
   { student: 'Sofía Martínez', subject: 'Cálculo I', amount: '$30', date: '12 Jun', status: 'Pagado' as PaymentStatus },
@@ -190,11 +177,20 @@ function VisualActionButton({ label, onClick, tone = 'neutral' }: {
 }
 
 export default function InstructorTools() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<TabKey>('calendario')
+  const [subs, setSubs] = useState<Subscription[]>([])
 
   useEffect(() => {
     document.title = 'Herramientas instructor | Uniference'
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+    getInstructorSubscriptions(user.uid).then(setSubs)
+  }, [user])
+
+  const activeCount = subs.filter(s => s.status === 'active').length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -235,7 +231,11 @@ export default function InstructorTools() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 -mt-12 pb-16 relative z-20">
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8" aria-label="Resumen de herramientas">
-          {summaryCards.map(({ label, value, icon: Icon, tone }, i) => (
+          {summaryCards.map(({ label, value: mockValue, icon: Icon, tone }, i) => {
+            let value = mockValue
+            if (label === 'Sesiones esta semana') value = String(activeCount)
+            if (label === 'Solicitudes pendientes') value = String(subs.filter(s => s.status === 'pending').length)
+            return (
             <motion.article
               key={label}
               custom={i}
@@ -250,7 +250,7 @@ export default function InstructorTools() {
               <p className="text-3xl font-extrabold text-gray-900">{value}</p>
               <p className="text-sm text-gray-500 mt-1">{label}</p>
             </motion.article>
-          ))}
+          )})}
         </section>
 
         <motion.section
@@ -346,34 +346,18 @@ export default function InstructorTools() {
                 description="Evalúa solicitudes de estudiantes y decide si aceptar, rechazar o proponer otro horario."
               />
 
-              {/* TODO: conectar solicitudes reales y acciones con Firestore cuando exista el flujo de reservas. */}
               <div className="space-y-4">
-                {requests.map((request) => (
-                  <article key={`${request.student}-${request.subject}`} className="rounded-3xl border border-gray-100 bg-gray-50 p-4">
+                {subs.filter(s => s.status === 'pending').length === 0 ? (
+                  <p className="text-sm text-gray-400 py-4">No hay solicitudes pendientes.</p>
+                ) : subs.filter(s => s.status === 'pending').map((sub) => (
+                  <article key={sub.id} className="rounded-3xl border border-gray-100 bg-gray-50 p-4">
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4">
                       <div>
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h3 className="font-extrabold text-gray-900">{request.student}</h3>
-                          <StatusBadge status={request.status} />
+                          <h3 className="font-extrabold text-gray-900">{sub.studentName}</h3>
+                          <StatusBadge status="Pendiente" />
                         </div>
-                        <p className="text-sm font-semibold text-primary-700 mb-2">{request.subject} · {request.schedule}</p>
-                        <p className="text-sm text-gray-600 leading-relaxed">{request.note}</p>
-                      </div>
-                      <div className="flex flex-col sm:flex-row lg:flex-col gap-2 lg:w-48">
-                        <VisualActionButton
-                          label="Aceptar"
-                          tone="primary"
-                          onClick={() => console.log('Accept request placeholder', request)}
-                        />
-                        <VisualActionButton
-                          label="Rechazar"
-                          tone="danger"
-                          onClick={() => console.log('Reject request placeholder', request)}
-                        />
-                        <VisualActionButton
-                          label="Proponer otro horario"
-                          onClick={() => console.log('Suggest schedule placeholder', request)}
-                        />
+                        <p className="text-sm font-semibold text-primary-700 mb-2">{sub.subject} · {sub.price}</p>
                       </div>
                     </div>
                   </article>

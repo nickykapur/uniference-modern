@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
@@ -7,13 +7,17 @@ import {
   ArrowRight,
   BadgeCheck,
   BarChart3,
+  Check,
   CheckCircle2,
   Crown,
   Eye,
+  Loader2,
   Megaphone,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react'
+import { getUserProfile, saveUserProfile } from '../lib/profile'
+import { useAuth } from '../context/AuthContext'
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -84,12 +88,38 @@ const benefits: { title: string; text: string; icon: LucideIcon; tone: string }[
 ]
 
 export default function InstructorPremium() {
+  const { user } = useAuth()
+  const [isPremium, setIsPremium] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [activating, setActivating] = useState(false)
+  const [activated, setActivated] = useState(false)
+
   useEffect(() => {
     document.title = 'Instructor Premium | Uniference'
   }, [])
 
-  // TODO: conectar plan Premium con Stripe Subscriptions o pasarela definida.
-  // TODO: guardar estado premium del instructor cuando el pago esté activo.
+  useEffect(() => {
+    if (!user) return
+    getUserProfile(user.uid).then(p => {
+      setIsPremium(p.isPremium ?? false)
+    }).finally(() => setLoading(false))
+  }, [user])
+
+  async function handleActivate() {
+    if (!user) return
+    setActivating(true)
+    try {
+      const now = new Date()
+      const renewal = new Date(now.setMonth(now.getMonth() + 1))
+        .toLocaleDateString('es-PA', { day: 'numeric', month: 'long' })
+      await saveUserProfile(user.uid, { isPremium: true, premiumRenewal: renewal })
+      setIsPremium(true)
+      setActivated(true)
+      setTimeout(() => setActivated(false), 3000)
+    } finally {
+      setActivating(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -173,13 +203,25 @@ export default function InstructorPremium() {
                 ))}
               </ul>
               {plan.highlighted ? (
-                <Link
-                  to="/instructor/anuncios"
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-3 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
-                >
-                  {plan.cta}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+                loading ? (
+                  <div className="w-full flex justify-center py-3"><Loader2 className="w-5 h-5 animate-spin text-primary-500" /></div>
+                ) : isPremium ? (
+                  <div className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-amber-100 px-5 py-3 text-sm font-semibold text-amber-700">
+                    <BadgeCheck className="w-4 h-4" />
+                    Premium activo
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleActivate}
+                    disabled={activating}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-3 text-sm font-semibold text-white hover:bg-primary-600 transition-colors disabled:opacity-70"
+                  >
+                    {activating ? <Loader2 className="w-4 h-4 animate-spin" /> : activated ? <Check className="w-4 h-4" /> : null}
+                    {activated ? '¡Activado!' : plan.cta}
+                    {!activating && !activated && <ArrowRight className="w-4 h-4" />}
+                  </button>
+                )
               ) : (
                 <button
                   type="button"

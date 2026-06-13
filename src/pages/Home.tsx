@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Search, Star, Users, ArrowRight, BookOpen, TrendingUp, MessageSquare, Shield, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
+import { collection, getCountFromServer, query, where } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import { useReviews } from '../hooks/useReviews'
 import type { ProfessorMatch } from '../hooks/useReviews'
 
@@ -14,11 +16,11 @@ const fadeUp: Variants = {
   }),
 }
 
-const stats = [
-  { label: 'Reseñas publicadas', value: '1,200+' },
-  { label: 'Profesores evaluados', value: '340+' },
-  { label: 'Universidades', value: '6' },
-  { label: 'Estudiantes activos', value: '800+' },
+const STATIC_STATS = [
+  { label: 'Reseñas publicadas', value: '—', key: 'reviews' },
+  { label: 'Profesores evaluados', value: '—', key: 'professors' },
+  { label: 'Universidades', value: '6', key: 'unis' },
+  { label: 'Estudiantes activos', value: '—', key: 'students' },
 ]
 
 const UNIS = [
@@ -40,8 +42,24 @@ export default function Home() {
   const [lastQuery, setLastQuery] = useState('')
   const searchRef = useRef<HTMLDivElement>(null)
 
+  const [liveStats, setLiveStats] = useState<Record<string, string>>({})
+
   useEffect(() => {
     document.title = 'Uniference – Reseñas de Profesores en Panamá | UTP, UP, Latina, USMA'
+  }, [])
+
+  useEffect(() => {
+    Promise.all([
+      getCountFromServer(query(collection(db, 'reviews'), where('aceptado', '==', true))),
+      getCountFromServer(collection(db, 'users')),
+    ]).then(([reviewsSnap, usersSnap]) => {
+      const reviewCount = reviewsSnap.data().count
+      const userCount = usersSnap.data().count
+      setLiveStats({
+        reviews: reviewCount >= 1000 ? `${(reviewCount / 1000).toFixed(1)}k+` : `${reviewCount}`,
+        students: userCount >= 1000 ? `${(userCount / 1000).toFixed(1)}k+` : `${userCount}`,
+      })
+    }).catch(() => {})
   }, [])
 
   // Live search across all universities as the user types
@@ -212,13 +230,13 @@ export default function Home() {
       {/* ── STATS ── */}
       <section className="bg-primary-700">
         <div className="max-w-5xl mx-auto px-6 py-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {stats.map((s, i) => (
+          {STATIC_STATS.map((s, i) => (
             <motion.div
               key={s.label}
               custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
               className="text-center"
             >
-              <p className="text-2xl font-extrabold text-white">{s.value}</p>
+              <p className="text-2xl font-extrabold text-white">{liveStats[s.key] ?? s.value}</p>
               <p className="text-primary-200 text-xs mt-0.5">{s.label}</p>
             </motion.div>
           ))}

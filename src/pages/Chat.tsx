@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
@@ -6,11 +6,16 @@ import {
   ArrowLeft,
   Bell,
   CalendarDays,
+  Loader2,
   MessageCircle,
   Send,
   ShieldCheck,
   XCircle,
 } from 'lucide-react'
+import { getChatById, subscribeToMessages, sendMessage, archiveChat } from '../lib/chat'
+import type { ChatDoc, Message } from '../lib/chat'
+import { cancelSubscription } from '../lib/subscriptions'
+import { useAuth } from '../context/AuthContext'
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -21,50 +26,92 @@ const fadeUp: Variants = {
   }),
 }
 
-const chats = {
-  'calculo-ana': {
-    instructor: 'Ana Rodríguez',
-    subject: 'Cálculo I',
-    price: '$15/hora',
-    status: 'Suscripción activa',
-    nextSession: 'Miércoles, 6:00 p.m.',
-    unread: 2,
-    messages: [
-      { id: 'm1', from: 'instructor', body: 'Hola, ya revisé tus dudas sobre límites laterales.', time: '5:42 p.m.' },
-      { id: 'm2', from: 'student', body: 'Gracias, me cuesta saber cuándo una función no tiene límite.', time: '5:45 p.m.' },
-      { id: 'm3', from: 'instructor', body: 'Lo vemos con dos ejemplos y luego hacemos práctica de parcial.', time: '5:49 p.m.' },
-      { id: 'm4', from: 'student', body: 'Perfecto. También quiero repasar derivadas básicas.', time: '5:51 p.m.' },
-    ],
-  },
-  'programacion-carlos': {
-    instructor: 'Carlos Méndez',
-    subject: 'Programación',
-    price: '$18/hora',
-    status: 'Suscripción activa',
-    nextSession: 'Sábado, 10:00 a.m.',
-    unread: 1,
-    messages: [
-      { id: 'm1', from: 'instructor', body: 'Trae el ejercicio de ciclos y lo resolvemos paso a paso.', time: '9:12 a.m.' },
-      { id: 'm2', from: 'student', body: 'Lo tengo. Creo que mi error está en la condición del while.', time: '9:18 a.m.' },
-      { id: 'm3', from: 'instructor', body: 'Exacto, ahí suele estar el detalle. Lo revisamos juntos.', time: '9:20 a.m.' },
-    ],
-  },
-}
-
-type ChatKey = keyof typeof chats
-
 export default function Chat() {
-  const { chatId } = useParams()
-  const activeChat = chats[(chatId ?? 'calculo-ana') as ChatKey] ?? chats['calculo-ana']
+  const { chatId } = useParams<{ chatId: string }>()
+  const { user } = useAuth()
+
+  const [chat, setChat] = useState<ChatDoc | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loadingChat, setLoadingChat] = useState(true)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+
+  const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     document.title = 'Chat | Uniference'
   }, [])
 
-  // TODO: conectar mensajes en tiempo real con Firestore onSnapshot.
-  // TODO: restringir acceso al chat a suscripciones activas.
-  // TODO: conectar notificaciones de mensajes nuevos.
-  // TODO: archivar chat al cancelar la suscripción.
+  useEffect(() => {
+    if (!chatId) return
+    getChatById(chatId).then(c => {
+      setChat(c)
+      setLoadingChat(false)
+    })
+  }, [chatId])
+
+  useEffect(() => {
+    if (!chatId) return
+    const unsub = subscribeToMessages(chatId, msgs => {
+      setMessages(msgs)
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    })
+    return unsub
+  }, [chatId])
+
+  async function handleSend() {
+    if (!user || !chatId || !text.trim()) return
+    const isStudent = chat?.studentId === user.uid
+    setSending(true)
+    try {
+      await sendMessage({
+        chatId,
+        from: isStudent ? 'student' : 'instructor',
+        senderId: user.uid,
+        body: text.trim(),
+      })
+      setText('')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  async function handleCancelSubscription() {
+    if (!chat?.subscriptionId || !chatId) return
+    setCancelling(true)
+    try {
+      await Promise.all([
+        cancelSubscription(chat.subscriptionId),
+        archiveChat(chatId),
+      ])
+      setChat(prev => prev ? { ...prev, status: 'archived' } : prev)
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  const isStudent = chat ? user?.uid === chat.studentId : true
+  const unreadCount = chat ? (isStudent ? chat.unreadStudent ?? 0 : chat.unreadInstructor ?? 0) : 0
+
+  if (loadingChat) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!chat) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+        <p className="text-gray-500">Chat no encontrado o sin acceso.</p>
+        <Link to="/suscripciones" className="text-primary-600 font-semibold hover:text-primary-700">
+          Volver a suscripciones
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,19 +141,21 @@ export default function Chat() {
                 Chat habilitado
               </div>
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white mb-3">
-                {activeChat.instructor}
+                {isStudent ? chat.instructorName : chat.studentName}
               </h1>
-              <p className="text-primary-100 text-lg">{activeChat.subject}</p>
+              <p className="text-primary-100 text-lg">{chat.subject}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 text-green-700 px-3 py-1.5 text-xs font-bold">
                 <ShieldCheck className="w-4 h-4" />
-                {activeChat.status}
+                Suscripción activa
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 text-white px-3 py-1.5 text-xs font-bold">
-                <Bell className="w-4 h-4" />
-                {activeChat.unread + 1} mensajes nuevos
-              </span>
+              {unreadCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 text-white px-3 py-1.5 text-xs font-bold">
+                  <Bell className="w-4 h-4" />
+                  {unreadCount} mensaje{unreadCount === 1 ? '' : 's'} nuevo{unreadCount === 1 ? '' : 's'}
+                </span>
+              )}
             </div>
           </motion.div>
         </div>
@@ -124,53 +173,61 @@ export default function Chat() {
             <div className="border-b border-gray-100 px-5 py-4 flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-bold text-gray-900">Conversación</p>
-                <p className="text-xs text-gray-400">Vista mock de mensajes</p>
+                <p className="text-xs text-gray-400">{messages.length} mensaje{messages.length === 1 ? '' : 's'}</p>
               </div>
-              <span className="rounded-full bg-red-100 text-red-600 text-xs font-bold px-2.5 py-1">
-                {activeChat.unread + 1} nuevos
-              </span>
+              {unreadCount > 0 && (
+                <span className="rounded-full bg-red-100 text-red-600 text-xs font-bold px-2.5 py-1">
+                  {unreadCount} nuevo{unreadCount === 1 ? '' : 's'}
+                </span>
+              )}
             </div>
 
-            <div className="p-4 sm:p-6 space-y-4 bg-gray-50/60">
-              {activeChat.messages.map((message, i) => {
-                const isStudent = message.from === 'student'
+            <div className="p-4 sm:p-6 space-y-4 bg-gray-50/60 min-h-[300px] max-h-[500px] overflow-y-auto">
+              {messages.length === 0 && (
+                <p className="text-center text-sm text-gray-400 pt-8">No hay mensajes todavía. ¡Inicia la conversación!</p>
+              )}
+              {messages.map((message, i) => {
+                const isMine = message.senderId === user?.uid
                 return (
                   <motion.div
-                    key={message.id}
+                    key={message.id ?? i}
                     custom={i}
                     variants={fadeUp}
                     initial="hidden"
                     animate="visible"
-                    className={`flex ${isStudent ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`max-w-[82%] sm:max-w-[70%] rounded-3xl px-4 py-3 shadow-sm ${
-                      isStudent
+                      isMine
                         ? 'bg-primary-500 text-white rounded-br-md'
                         : 'bg-white text-gray-700 border border-gray-100 rounded-bl-md'
                     }`}>
                       <p className="text-sm leading-relaxed">{message.body}</p>
-                      <p className={`text-[11px] mt-2 ${isStudent ? 'text-primary-100' : 'text-gray-400'}`}>
-                        {message.time}
-                      </p>
                     </div>
                   </motion.div>
                 )
               })}
+              <div ref={bottomRef} />
             </div>
 
             <div className="border-t border-gray-100 p-4 bg-white">
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                   placeholder="Escribe un mensaje..."
-                  className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors"
+                  disabled={chat.status === 'archived'}
+                  className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-colors disabled:opacity-50"
                 />
                 <button
                   type="button"
-                  onClick={() => console.log('Send message placeholder', chatId)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-500 px-5 py-3 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+                  onClick={handleSend}
+                  disabled={sending || !text.trim() || chat.status === 'archived'}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-500 px-5 py-3 text-sm font-semibold text-white hover:bg-primary-600 transition-colors disabled:opacity-50"
                 >
-                  <Send className="w-4 h-4" />
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Enviar
                 </button>
               </div>
@@ -190,11 +247,11 @@ export default function Chat() {
             <h2 className="text-xl font-extrabold text-gray-900 mb-4">Suscripción</h2>
             <div className="space-y-3 mb-5">
               {[
-                ['Instructor', activeChat.instructor],
-                ['Materia', activeChat.subject],
-                ['Precio', activeChat.price],
-                ['Estado', activeChat.status],
-                ['Próxima sesión', activeChat.nextSession],
+                ['Instructor', chat.instructorName],
+                ['Materia', chat.subject],
+                ['Precio', chat.price],
+                ['Estado', chat.status === 'active' ? 'Suscripción activa' : 'Archivada'],
+                ['Próxima sesión', chat.nextSession || 'Por definir'],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-2xl bg-gray-50 border border-gray-100 p-3">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
@@ -202,14 +259,17 @@ export default function Chat() {
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => console.log('Cancel subscription placeholder', chatId)}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-100 transition-colors"
-            >
-              <XCircle className="w-4 h-4" />
-              Cancelar suscripción
-            </button>
+            {chat.status === 'active' && (
+              <button
+                type="button"
+                onClick={handleCancelSubscription}
+                disabled={cancelling}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-100 transition-colors disabled:opacity-50"
+              >
+                {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                Cancelar suscripción
+              </button>
+            )}
           </motion.aside>
         </div>
       </main>
