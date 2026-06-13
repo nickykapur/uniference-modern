@@ -23,6 +23,7 @@ const PostularseTutor = lazy(() => import('./pages/PostularseTutor'))
 const Login = lazy(() => import('./pages/Login'))
 const Registro = lazy(() => import('./pages/Registro'))
 const Admin = lazy(() => import('./pages/Admin'))
+const RoleSelect = lazy(() => import('./pages/RoleSelect'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 function ScrollToTop() {
@@ -67,6 +68,7 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/rol" element={<RoleSelect />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

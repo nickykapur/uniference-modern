@@ -3,6 +3,16 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { GraduationCap, Loader2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { getUserRole } from '../lib/users'
+import { isAdminEmail } from '../lib/admins'
+import { auth } from '../lib/firebase'
+
+function roleRedirect(role: string | null | undefined): string {
+  if (role === 'admin') return '/admin'
+  if (role === 'instructor') return '/instructor'
+  if (role === 'student') return '/estudiante'
+  return '/'
+}
 
 export default function Login() {
   const { login, loginWithGoogle } = useAuth()
@@ -18,7 +28,15 @@ export default function Login() {
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/')
+      const uid = auth.currentUser?.uid
+      const userEmail = auth.currentUser?.email
+      let role: string | null = null
+      if (isAdminEmail(userEmail)) {
+        role = 'admin'
+      } else if (uid) {
+        role = await getUserRole(uid)
+      }
+      navigate(roleRedirect(role))
     } catch {
       setError('Correo o contraseña incorrectos.')
     } finally {
@@ -28,8 +46,20 @@ export default function Login() {
 
   const handleGoogle = async () => {
     try {
-      await loginWithGoogle()
-      navigate('/')
+      const { isNewUser } = await loginWithGoogle()
+      if (isNewUser) {
+        navigate('/rol')
+      } else {
+        const uid = auth.currentUser?.uid
+        const userEmail = auth.currentUser?.email
+        let role: string | null = null
+        if (isAdminEmail(userEmail)) {
+          role = 'admin'
+        } else if (uid) {
+          role = await getUserRole(uid)
+        }
+        navigate(roleRedirect(role))
+      }
     } catch {
       setError('Error al iniciar sesión con Google.')
     }

@@ -29,10 +29,13 @@ export interface Tutor {
   createdAt?: unknown
 }
 
+export type UserRole = 'student' | 'instructor' | 'admin'
+
 export interface User {
   uid: string
   email: string | null
   displayName: string | null
+  role?: UserRole
 }
 
 export type Universidad =

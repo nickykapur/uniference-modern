@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { GraduationCap, Loader2 } from 'lucide-react'
+import { GraduationCap, Loader2, BookOpen, Briefcase } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { setUserRole } from '../lib/users'
+import { auth } from '../lib/firebase'
+import type { UserRole } from '../types'
 
 export default function Registro() {
   const { register, loginWithGoogle } = useAuth()
@@ -10,6 +13,7 @@ export default function Registro() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [role, setRole] = useState<UserRole>('student')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,8 +24,8 @@ export default function Registro() {
     if (password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres.')
     setLoading(true)
     try {
-      await register(email, password)
-      navigate('/')
+      await register(email, password, role)
+      navigate(role === 'instructor' ? '/instructor' : '/estudiante')
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       if (code === 'auth/email-already-in-use') setError('Este correo ya está registrado.')
@@ -33,8 +37,14 @@ export default function Registro() {
 
   const handleGoogle = async () => {
     try {
-      await loginWithGoogle()
-      navigate('/')
+      const { isNewUser } = await loginWithGoogle()
+      if (isNewUser) {
+        const uid = auth.currentUser?.uid
+        if (uid) await setUserRole(uid, role)
+        navigate(role === 'instructor' ? '/instructor' : '/estudiante')
+      } else {
+        navigate('/')
+      }
     } catch {
       setError('Error al registrarse con Google.')
     }
@@ -56,6 +66,28 @@ export default function Registro() {
             {error}
           </div>
         )}
+
+        {/* Role selector */}
+        <div className="flex gap-3 mb-6">
+          <button type="button" onClick={() => setRole('student')}
+            className={`flex-1 flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all ${
+              role === 'student'
+                ? 'border-primary-500 bg-primary-50 text-primary-700'
+                : 'border-gray-200 text-gray-500 hover:border-gray-300'
+            }`}>
+            <BookOpen className="w-6 h-6" />
+            <span className="font-semibold text-sm">Estudiante</span>
+          </button>
+          <button type="button" onClick={() => setRole('instructor')}
+            className={`flex-1 flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all ${
+              role === 'instructor'
+                ? 'border-primary-500 bg-primary-50 text-primary-700'
+                : 'border-gray-200 text-gray-500 hover:border-gray-300'
+            }`}>
+            <Briefcase className="w-6 h-6" />
+            <span className="font-semibold text-sm">Instructor</span>
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
