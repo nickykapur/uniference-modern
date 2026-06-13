@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 import type { Tutor } from '../types'
 import { UNIVERSIDADES } from '../types'
+import PremiumInstructorAd from '../components/PremiumInstructorAd'
 
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -184,6 +185,36 @@ export default function Tutores() {
 
       {/* Results */}
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* TODO: reemplazar anuncios mock por anuncios premium reales. */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-primary-500 uppercase tracking-[0.16em] mb-1">
+              Instructores destacados
+            </p>
+            <h2 className="text-2xl font-extrabold text-gray-900">Premium para este semestre</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <PremiumInstructorAd
+              instructorName="Ana Rodríguez"
+              subject="Cálculo I"
+              description="Refuerzo intensivo antes de parciales con ejercicios guiados y práctica por tema."
+              priceLabel="$15/hora"
+              university="UTP"
+              ctaLabel="Ver instructor"
+              ctaHref="/instructor"
+            />
+            <PremiumInstructorAd
+              instructorName="Carlos Méndez"
+              subject="Programación I"
+              description="Tutorías desde cero para lógica, ciclos, funciones y resolución de problemas."
+              priceLabel="$18/hora"
+              university="Universidad de Panamá"
+              ctaLabel="Ver instructor"
+              ctaHref="/instructor"
+            />
+          </div>
+        </motion.section>
+
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
