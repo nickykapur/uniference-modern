@@ -13,6 +13,8 @@ const Futuro = lazy(() => import('./pages/Futuro'))
 const Estudiante = lazy(() => import('./pages/Estudiante'))
 const Instructor = lazy(() => import('./pages/Instructor'))
 const Perfil = lazy(() => import('./pages/Perfil'))
+const Suscripciones = lazy(() => import('./pages/Suscripciones'))
+const Chat = lazy(() => import('./pages/Chat'))
 const PostularseTutor = lazy(() => import('./pages/PostularseTutor'))
 const Login = lazy(() => import('./pages/Login'))
 const Registro = lazy(() => import('./pages/Registro'))
@@ -51,6 +53,8 @@ export default function App() {
               <Route path="/estudiante" element={<Estudiante />} />
               <Route path="/instructor" element={<Instructor />} />
               <Route path="/perfil" element={<Perfil />} />
+              <Route path="/suscripciones" element={<Suscripciones />} />
+              <Route path="/chat/:chatId" element={<Chat />} />
               <Route path="/tutores/postular" element={<PostularseTutor />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
