@@ -18,6 +18,7 @@ import {
   Trash2,
   UserRoundCheck,
   Users,
+  Wrench,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -234,6 +235,13 @@ export default function Instructor() {
               >
                 <Megaphone className="w-4 h-4" />
                 Gestionar mis anuncios
+              </Link>
+              <Link
+                to="/instructor/herramientas"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-4 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-100 transition-colors"
+              >
+                <Wrench className="w-4 h-4" />
+                Gestionar sesiones y recursos
               </Link>
             </div>
           </div>
