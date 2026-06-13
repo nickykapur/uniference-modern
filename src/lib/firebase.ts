@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCXi090Onl0-A4ylyAmICJkau5ibpZq0_A",
+  apiKey: "AIzaSyCXiO9OOnl0-A4ylyAmICJkau5ibpZq0_A",
   authDomain: "uniference-2db8a.firebaseapp.com",
   databaseURL: "https://uniference-2db8a.firebaseio.com",
   projectId: "uniference-2db8a",
