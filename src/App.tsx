@@ -17,6 +17,7 @@ const Suscripciones = lazy(() => import('./pages/Suscripciones'))
 const Chat = lazy(() => import('./pages/Chat'))
 const InstructorPremium = lazy(() => import('./pages/InstructorPremium'))
 const MisAnuncios = lazy(() => import('./pages/MisAnuncios'))
+const InstructorTools = lazy(() => import('./pages/InstructorTools'))
 const PostularseTutor = lazy(() => import('./pages/PostularseTutor'))
 const Login = lazy(() => import('./pages/Login'))
 const Registro = lazy(() => import('./pages/Registro'))
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="/chat/:chatId" element={<Chat />} />
               <Route path="/instructor/premium" element={<InstructorPremium />} />
               <Route path="/instructor/anuncios" element={<MisAnuncios />} />
+              <Route path="/instructor/herramientas" element={<InstructorTools />} />
               <Route path="/tutores/postular" element={<PostularseTutor />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
