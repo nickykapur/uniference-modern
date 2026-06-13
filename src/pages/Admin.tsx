@@ -2,17 +2,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Loader2, CheckCircle, XCircle, Star, BookOpen, Building2,
-  ShieldCheck, ShieldAlert, Inbox, Phone, Clock, GraduationCap, MessageSquare,
+  ShieldCheck, ShieldAlert, Inbox, Phone, Clock, GraduationCap, MessageSquare, Trash2,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 import { isAdminEmail } from '../lib/admins'
 import { UNIVERSIDADES } from '../types'
 import type { Review, Tutor } from '../types'
 
-type Tab = 'reviews' | 'tutors'
+type Tab = 'reviews' | 'tutors' | 'comments'
 
 const tsSeconds = (v: unknown): number =>
   (v as { seconds?: number })?.seconds ?? 0
@@ -60,19 +60,19 @@ export default function Admin() {
   const [tab, setTab] = useState<Tab>('reviews')
   const [reviews, setReviews] = useState<Review[]>([])
   const [tutors, setTutors] = useState<Tutor[]>([])
+  const [comments, setComments] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { document.title = 'Panel de Moderación | Uniference' }, [])
 
-  // `loading` starts true and only flips false here, so no synchronous
-  // setState is needed when the effect kicks this off
   const load = useCallback(async () => {
     try {
-      const [revSnap, tutSnap] = await Promise.all([
+      const [revSnap, tutSnap, commentsSnap] = await Promise.all([
         getDocs(query(collection(db, 'reviews'), where('aceptado', '==', false))),
         getDocs(query(collection(db, 'tutors'), where('aceptado', '==', false))),
+        getDocs(query(collection(db, 'reviews'), where('aceptado', '==', true), orderBy('createdAt', 'desc'))),
       ])
       const newestFirst = (a: { createdAt?: unknown }, b: { createdAt?: unknown }) =>
         tsSeconds(b.createdAt) - tsSeconds(a.createdAt)
@@ -84,10 +84,13 @@ export default function Admin() {
         tutSnap.docs.map(d => ({ id: d.id, ...d.data() } as Tutor))
           .filter(t => !t.rechazado).sort(newestFirst)
       )
+      setComments(
+        commentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Review))
+      )
       setError(null)
     } catch (e) {
       console.error(e)
-      setError('Error al cargar los pendientes. Intenta de nuevo.')
+      setError('Error al cargar los datos. Intenta de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -99,8 +102,6 @@ export default function Admin() {
     return () => clearTimeout(t)
   }, [isAdmin, load])
 
-  // Approve publishes the item; reject marks it rechazado (update-only,
-  // compatible with the existing Firestore rules — nothing is deleted)
   const moderate = async (col: 'reviews' | 'tutors', id: string, approve: boolean) => {
     setBusyId(id)
     setError(null)
@@ -112,6 +113,20 @@ export default function Admin() {
     } catch (e) {
       console.error(e)
       setError('No se pudo actualizar. Revisa tu conexión e intenta de nuevo.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const deleteComment = async (id: string) => {
+    setBusyId(id)
+    setError(null)
+    try {
+      await deleteDoc(doc(db, 'reviews', id))
+      setComments(cs => cs.filter(c => c.id !== id))
+    } catch (e) {
+      console.error(e)
+      setError('No se pudo eliminar. Intenta de nuevo.')
     } finally {
       setBusyId(null)
     }
@@ -148,7 +163,7 @@ export default function Admin() {
     )
   }
 
-  const pending = tab === 'reviews' ? reviews.length : tutors.length
+  const pendingCount = tab === 'reviews' ? reviews.length : tab === 'tutors' ? tutors.length : comments.length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -177,13 +192,14 @@ export default function Admin() {
           {([
             { key: 'reviews', label: 'Reseñas', count: reviews.length, icon: <MessageSquare className="w-4 h-4" /> },
             { key: 'tutors', label: 'Tutores', count: tutors.length, icon: <GraduationCap className="w-4 h-4" /> },
+            { key: 'comments', label: 'Comentarios', count: comments.length, icon: <BookOpen className="w-4 h-4" /> },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all ${
                 tab === t.key ? 'bg-primary-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
               }`}>
               {t.icon}
-              {t.label}
+              <span className="hidden sm:inline">{t.label}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                 tab === t.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
               }`}>
@@ -199,12 +215,16 @@ export default function Admin() {
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
           </div>
-        ) : pending === 0 ? (
+        ) : pendingCount === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="text-center py-16 text-gray-400">
             <Inbox className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium text-gray-600">Todo al día</p>
-            <p className="text-sm mt-1">No hay {tab === 'reviews' ? 'reseñas' : 'solicitudes'} pendientes</p>
+            <p className="font-medium text-gray-600">
+              {tab === 'comments' ? 'Sin comentarios aprobados' : 'Todo al día'}
+            </p>
+            <p className="text-sm mt-1">
+              No hay {tab === 'reviews' ? 'reseñas' : tab === 'tutors' ? 'solicitudes' : 'comentarios'} {tab === 'comments' ? 'aún' : 'pendientes'}
+            </p>
           </motion.div>
         ) : tab === 'reviews' ? (
           <div className="space-y-4">
@@ -242,7 +262,7 @@ export default function Admin() {
               ))}
             </AnimatePresence>
           </div>
-        ) : (
+        ) : tab === 'tutors' ? (
           <div className="space-y-4">
             <AnimatePresence>
               {tutors.map(t => (
@@ -286,6 +306,49 @@ export default function Admin() {
                   <ActionButtons busy={busyId === t.id}
                     onApprove={() => moderate('tutors', t.id!, true)}
                     onReject={() => moderate('tutors', t.id!, false)} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400 text-center mb-2">
+              {comments.length} comentario{comments.length !== 1 ? 's' : ''} aprobado{comments.length !== 1 ? 's' : ''} — más recientes primero
+            </p>
+            <AnimatePresence>
+              {comments.map(r => (
+                <motion.div key={r.id} layout
+                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: 80, transition: { duration: 0.2 } }}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <h3 className="font-bold text-gray-900">{r.profesor}</h3>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                        <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{r.materia}</span>
+                        <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />
+                          {UNIVERSIDADES[r.universidad as keyof typeof UNIVERSIDADES] ?? r.universidad}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <StarDisplay value={Number(r.rating) || 0} />
+                      <span className="text-xs text-gray-300">{tsDate(r.createdAt)}</span>
+                    </div>
+                  </div>
+                  <blockquote className="text-gray-600 text-sm bg-gray-50 rounded-xl px-4 py-3 border-l-4 border-green-400 italic">
+                    "{r.comentario}"
+                  </blockquote>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-gray-400">
+                      Enviado por: {r.userEmail ? `@${r.userEmail.split('@')[0]}` : 'anónimo'}
+                    </p>
+                    <button onClick={() => deleteComment(r.id!)} disabled={busyId === r.id}
+                      className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50">
+                      {busyId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      Eliminar
+                    </button>
+                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>

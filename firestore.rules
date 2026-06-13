@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'nkapur2211@gmail.com';
+    }
+
+    // Reviews
+    match /reviews/{reviewId} {
+      // Anyone can read approved reviews
+      allow read: if resource.data.aceptado == true;
+      // Admin can read everything
+      allow read: if isAdmin();
+      // Authenticated users can submit
+      allow create: if request.auth != null
+        && request.resource.data.aceptado == false
+        && request.resource.data.rechazado == false;
+      // Only admin can approve/reject
+      allow update: if isAdmin();
+    }
+
+    // Tutors
+    match /tutors/{tutorId} {
+      allow read: if resource.data.aceptado == true;
+      allow read: if isAdmin();
+      allow create: if request.auth != null
+        && request.resource.data.aceptado == false
+        && request.resource.data.rechazado == false;
+      allow update: if isAdmin();
+    }
+
+    // Email list — write-only for authenticated users, admin can read
+    match /emailList/{docId} {
+      allow create: if request.auth != null;
+      allow read: if isAdmin();
+    }
+  }
+}
