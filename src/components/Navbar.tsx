@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { Home, Search, Star, Users, LogOut, LogIn, ShieldCheck, ChevronDown, GraduationCap, BriefcaseBusiness, Settings, MessageCircle } from 'lucide-react'
+import { Home, Search, Star, Users, LogOut, LogIn, ShieldCheck, ChevronDown, GraduationCap, BriefcaseBusiness, Settings, MessageCircle, Crown, Megaphone } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { isAdminEmail } from '../lib/admins'
 
@@ -78,6 +78,16 @@ function AccountMenu() {
             className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
             <MessageCircle className="w-4 h-4" />
             Suscripciones y chat
+          </Link>
+          <Link to="/instructor/premium" onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <Crown className="w-4 h-4" />
+            Instructor Premium
+          </Link>
+          <Link to="/instructor/anuncios" onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <Megaphone className="w-4 h-4" />
+            Mis anuncios
           </Link>
           {isAdmin && (
             <Link to="/admin" onClick={() => setOpen(false)}

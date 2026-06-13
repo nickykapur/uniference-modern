@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Search, Loader2, Star, BookOpen, Building2, MessageSquarePlus, Mail, X, ExternalLink, Megaphone } from 'lucide-react'
+import { Search, Loader2, Star, BookOpen, Building2, MessageSquarePlus, Mail, X, ExternalLink } from 'lucide-react'
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useReviews } from '../hooks/useReviews'
@@ -8,6 +8,7 @@ import { UNIVERSIDADES } from '../types'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
+import PremiumInstructorAd from '../components/PremiumInstructorAd'
 
 const PAGE_TITLE = 'Buscar Profesor – Reseñas de Universidades en Panamá | Uniference'
 
@@ -143,63 +144,21 @@ function AggregateBar({ profesor, reviews }: { profesor?: string; reviews: Revie
   )
 }
 
-// ── SPONSOR SLOT ──────────────────────────────────────────────────────────────
-// Replace SPONSOR_NAME, SPONSOR_URL, SPONSOR_TAGLINE with real sponsor info.
-// Set HAS_SPONSOR = true when someone pays. Keep false to show the acquisition CTA.
-const HAS_SPONSOR = false
-const SPONSOR_NAME = 'Academia XYZ'
-const SPONSOR_URL = 'https://example.com'
-const SPONSOR_TAGLINE = 'Clases personalizadas para UTP y Latina'
-const CONTACT_EMAIL = 'hola@uniference.netlify.app' // change to your email
-
-function SponsorSlot({ universidad }: { universidad: string }) {
+// ── PREMIUM INSTRUCTOR AD ────────────────────────────────────────────────────
+function PremiumAdSlot({ universidad }: { universidad: string }) {
   const uniName = UNIVERSIDADES[universidad as keyof typeof UNIVERSIDADES] ?? 'tu universidad'
-  if (HAS_SPONSOR) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="bg-white border border-gray-100 rounded-2xl p-4 mb-6 flex items-center justify-between gap-4 shadow-sm"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded flex-shrink-0">
-            Patrocinado
-          </span>
-          <div className="min-w-0">
-            <p className="font-semibold text-gray-900 text-sm truncate">{SPONSOR_NAME}</p>
-            <p className="text-gray-400 text-xs truncate">{SPONSOR_TAGLINE}</p>
-          </div>
-        </div>
-        <a
-          href={SPONSOR_URL}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          className="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-500 text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary-600 transition-colors"
-        >
-          Ver más <ExternalLink className="w-3 h-3" />
-        </a>
-      </motion.div>
-    )
-  }
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="border border-dashed border-gray-200 rounded-2xl p-4 mb-6 flex items-center justify-between gap-4 bg-gray-50/50"
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Megaphone className="w-4 h-4 text-gray-400" />
-        </div>
-        <div className="min-w-0">
-          <p className="font-medium text-gray-600 text-sm">¿Tu academia llega a estudiantes de {uniName}?</p>
-          <p className="text-gray-400 text-xs">Patrocina esta página durante el semestre</p>
-        </div>
-      </div>
-      <a
-        href={`mailto:${CONTACT_EMAIL}?subject=Patrocinio Uniference&body=Hola, me interesa patrocinar Uniference para llegar a estudiantes de ${uniName}.`}
-        className="flex-shrink-0 inline-flex items-center gap-1.5 border border-gray-300 text-gray-600 text-xs font-semibold px-4 py-2 rounded-xl hover:bg-white hover:border-gray-400 transition-colors"
-      >
-        Contactar
-      </a>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+      {/* TODO: cargar anuncios premium reales según universidad/materia cuando exista backend. */}
+      <PremiumInstructorAd
+        instructorName="Ana Rodríguez"
+        subject="Refuerzo de Cálculo I antes de parciales"
+        description={`Sesiones prácticas para estudiantes de ${uniName} que quieren llegar con confianza a los parciales.`}
+        priceLabel="$15/hora"
+        university={uniName}
+        ctaLabel="Ver instructor"
+        ctaHref="/instructor"
+      />
     </motion.div>
   )
 }
@@ -383,7 +342,10 @@ export default function Buscar() {
   }, [])
 
   useEffect(() => {
-    if (!universidad || profesor.trim().length < 2) { setSuggestions([]); return }
+    if (!universidad || profesor.trim().length < 2) {
+      const timer = setTimeout(() => setSuggestions([]), 0)
+      return () => clearTimeout(timer)
+    }
     const timer = setTimeout(async () => {
       try {
         const q = query(collection(db, 'reviews'), where('universidad', '==', universidad))
@@ -578,8 +540,8 @@ export default function Buscar() {
 
         {results !== null && results.length > 0 && (
           <div>
-            {/* Sponsor slot — always shown when a university is selected */}
-            {universidad && <SponsorSlot universidad={universidad} />}
+            {/* Premium instructor ad — always shown when a university is selected */}
+            {universidad && <PremiumAdSlot universidad={universidad} />}
 
             <div className="space-y-8 mb-6">
               {grouped.map(([name, revs]) => (
