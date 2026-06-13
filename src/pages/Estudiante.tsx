@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 import {
   ArrowRight,
+  BookOpenCheck,
   GraduationCap,
   Pencil,
   Search,
@@ -85,6 +86,12 @@ const quickLinks = [
     title: 'Evaluar',
     text: 'Comparte tu experiencia con la comunidad.',
     icon: Star,
+  },
+  {
+    to: '/estudiante/vida-universitaria',
+    title: 'Vida universitaria',
+    text: 'Organiza tu semestre con GPA, grupos, apuntes y fechas clave.',
+    icon: BookOpenCheck,
   },
 ]
 
@@ -359,7 +366,7 @@ export default function Estudiante() {
             <h2 className="text-2xl font-extrabold text-gray-900">Accesos rápidos</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickLinks.map(({ to, title, text, icon: Icon }, i) => (
               <motion.div
                 key={to}
