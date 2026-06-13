@@ -18,6 +18,7 @@ const Chat = lazy(() => import('./pages/Chat'))
 const InstructorPremium = lazy(() => import('./pages/InstructorPremium'))
 const MisAnuncios = lazy(() => import('./pages/MisAnuncios'))
 const InstructorTools = lazy(() => import('./pages/InstructorTools'))
+const VidaUniversitaria = lazy(() => import('./pages/VidaUniversitaria'))
 const PostularseTutor = lazy(() => import('./pages/PostularseTutor'))
 const Login = lazy(() => import('./pages/Login'))
 const Registro = lazy(() => import('./pages/Registro'))
@@ -61,6 +62,7 @@ export default function App() {
               <Route path="/instructor/premium" element={<InstructorPremium />} />
               <Route path="/instructor/anuncios" element={<MisAnuncios />} />
               <Route path="/instructor/herramientas" element={<InstructorTools />} />
+              <Route path="/estudiante/vida-universitaria" element={<VidaUniversitaria />} />
               <Route path="/tutores/postular" element={<PostularseTutor />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />

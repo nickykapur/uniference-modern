@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { Home, Search, Star, Users, LogOut, LogIn, ShieldCheck, ChevronDown, GraduationCap, BriefcaseBusiness, Settings, MessageCircle, Crown, Megaphone, Wrench } from 'lucide-react'
+import { Home, Search, Star, Users, LogOut, LogIn, ShieldCheck, ChevronDown, GraduationCap, BriefcaseBusiness, Settings, MessageCircle, Crown, Megaphone, Wrench, BookOpen } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { isAdminEmail } from '../lib/admins'
 
@@ -63,6 +63,11 @@ function AccountMenu() {
             className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
             <GraduationCap className="w-4 h-4" />
             Portal estudiante
+          </Link>
+          <Link to="/estudiante/vida-universitaria" onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <BookOpen className="w-4 h-4" />
+            Vida universitaria
           </Link>
           <Link to="/instructor" onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
