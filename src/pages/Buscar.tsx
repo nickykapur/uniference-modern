@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 import PremiumInstructorAd from '../components/PremiumInstructorAd'
+import { getActiveAnnouncements } from '../lib/announcements'
+import type { Announcement } from '../lib/announcements'
 
 const PAGE_TITLE = 'Buscar Profesor – Reseñas de Universidades en Panamá | Uniference'
 
@@ -146,17 +148,31 @@ function AggregateBar({ profesor, reviews }: { profesor?: string; reviews: Revie
 
 // ── PREMIUM INSTRUCTOR AD ────────────────────────────────────────────────────
 function PremiumAdSlot({ universidad }: { universidad: string }) {
-  const uniName = UNIVERSIDADES[universidad as keyof typeof UNIVERSIDADES] ?? 'tu universidad'
+  const [ad, setAd] = useState<Announcement | null>(null)
+  const uniName = UNIVERSIDADES[universidad as keyof typeof UNIVERSIDADES] ?? universidad
+
+  useEffect(() => {
+    let active = true
+    getActiveAnnouncements()
+      .then(ads => {
+        if (!active) return
+        setAd(ads.find(a => a.university === uniName) ?? ads[0] ?? null)
+      })
+      .catch(() => setAd(null))
+    return () => { active = false }
+  }, [uniName])
+
+  if (!ad) return null
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-      {/* TODO: cargar anuncios premium reales según universidad/materia cuando exista backend. */}
       <PremiumInstructorAd
-        instructorName="Ana Rodríguez"
-        subject="Refuerzo de Cálculo I antes de parciales"
-        description={`Sesiones prácticas para estudiantes de ${uniName} que quieren llegar con confianza a los parciales.`}
-        priceLabel="$15/hora"
-        university={uniName}
-        ctaLabel="Ver instructor"
+        instructorName={ad.instructorName}
+        subject={ad.subject}
+        description={ad.description}
+        priceLabel={ad.price}
+        university={ad.university ?? uniName}
+        ctaLabel={ad.cta}
         ctaHref="/instructor"
       />
     </motion.div>
