@@ -9,6 +9,8 @@ import Home from './pages/Home'
 const Buscar = lazy(() => import('./pages/Buscar'))
 const Evaluar = lazy(() => import('./pages/Evaluar'))
 const Tutores = lazy(() => import('./pages/Tutores'))
+const Instructores = lazy(() => import('./pages/Instructores'))
+const InstructorPerfil = lazy(() => import('./pages/InstructorPerfil'))
 const Futuro = lazy(() => import('./pages/Futuro'))
 const Estudiante = lazy(() => import('./pages/Estudiante'))
 const Instructor = lazy(() => import('./pages/Instructor'))
@@ -54,6 +56,8 @@ export default function App() {
               <Route path="/buscar" element={<Buscar />} />
               <Route path="/evaluar" element={<Evaluar />} />
               <Route path="/tutores" element={<Tutores />} />
+              <Route path="/instructores" element={<Instructores />} />
+              <Route path="/instructores/:id" element={<InstructorPerfil />} />
               <Route path="/futuro" element={<Futuro />} />
               <Route path="/estudiante" element={<Estudiante />} />
               <Route path="/instructor" element={<Instructor />} />

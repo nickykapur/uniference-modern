@@ -4,14 +4,13 @@ import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCXiO9OOnl0-A4ylyAmICJkau5ibpZq0_A",
-  authDomain: "uniference-2db8a.firebaseapp.com",
-  databaseURL: "https://uniference-2db8a.firebaseio.com",
-  projectId: "uniference-2db8a",
-  storageBucket: "uniference-2db8a.appspot.com",
-  messagingSenderId: "313995125771",
-  appId: "1:313995125771:web:0d3ab7a7181207dfb0130e",
-  measurementId: "G-D7SBVNCZ7K"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 }
 
 const app = initializeApp(firebaseConfig)

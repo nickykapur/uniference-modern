@@ -7,6 +7,7 @@ export interface UserProfile {
   career?: string
   semester?: string
   // instructor fields
+  displayName?: string
   bio?: string
   universities?: string
   experience?: string

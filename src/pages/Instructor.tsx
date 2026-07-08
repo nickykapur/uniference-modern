@@ -121,7 +121,10 @@ export default function Instructor() {
     if (!user) return
     setSaving(true)
     try {
-      await saveUserProfile(user.uid, { bio, universities, experience, specialty, subjects, availability })
+      await saveUserProfile(user.uid, {
+        displayName: user.displayName ?? undefined,
+        bio, universities, experience, specialty, subjects, availability,
+      })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } finally {
@@ -143,13 +146,13 @@ export default function Instructor() {
     setSubjects(updated)
     setNewSubject({ name: '', description: '', price: '', unit: 'hora' })
     setShowNewSubjectForm(false)
-    if (user) saveUserProfile(user.uid, { subjects: updated })
+    if (user) saveUserProfile(user.uid, { displayName: user.displayName ?? undefined, subjects: updated })
   }
 
   function handleDeleteSubject(id: string) {
     const updated = subjects.filter(s => s.id !== id)
     setSubjects(updated)
-    if (user) saveUserProfile(user.uid, { subjects: updated })
+    if (user) saveUserProfile(user.uid, { displayName: user.displayName ?? undefined, subjects: updated })
   }
 
   function toggleAvailability(day: string) {
@@ -524,6 +527,15 @@ export default function Instructor() {
                       )}
                     </div>
                   </div>
+                  {user && (
+                    <Link
+                      to={`/instructores/${user.uid}`}
+                      className="inline-flex items-center gap-2 mt-6 text-sm font-semibold text-primary-600 hover:underline"
+                    >
+                      Ver mi perfil público
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             </section>

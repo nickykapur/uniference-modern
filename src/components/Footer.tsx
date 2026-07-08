@@ -5,6 +5,7 @@ const LINKS = [
   { to: '/buscar', label: 'Buscar Profesor' },
   { to: '/evaluar', label: 'Evaluar' },
   { to: '/tutores', label: 'Tutores' },
+  { to: '/instructores', label: 'Instructores' },
   { to: '/futuro', label: 'Visión' },
   { to: '/tutores/postular', label: 'Ser tutor' },
 ]
